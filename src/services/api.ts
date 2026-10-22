@@ -1,5 +1,5 @@
 
-import type { RespuestaError } from '@/tipos';
+import type { RespuestaError } from '@/types';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
 

@@ -1,4 +1,4 @@
-import { EstadoReporte } from '@/tipos';
+import { EstadoReporte } from '@/types';
 
 export const ColorEstado: Record<EstadoReporte, string> = {
   recibido: '#5D6D7E',

@@ -2,7 +2,7 @@ import type {
   CambioDeEstado,
   Reporte,
   RespuestaExitosa,
-} from '@/tipos';
+} from '@/types';
 import { apiGet } from './api';
 
 /** Obtiene los reportes del vecino autenticado. Requiere el token de sesión. */
