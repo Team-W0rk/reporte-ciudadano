@@ -54,7 +54,7 @@ src/
     reportes/          # nuevo.tsx, [id].tsx (detalle)          [Dev 2 / Dev 3]
     operador/          # bandeja municipal, rol operador        [Dev 3]
   types/               # Interfaces de TypeScript (entidades oficiales del PRD)
-  mocks/               # Datos falsos, tipados contra src/tipos
+  mocks/               # Datos falsos, tipados contra src/types
   services/           # ÚNICA puerta de entrada a los datos
   almacenamiento/      # wrappers de expo-secure-store / expo-sqlite (a completar)
   constants/
@@ -66,18 +66,19 @@ src/
 ### La regla más importante del proyecto
 
 **Ninguna pantalla importa un mock directamente.** Todo pasa por `src/services/reportes.ts`. Hoy esas funciones devuelven datos de `src/mocks/`; el día que la cátedra publique la API real, ese es el único archivo que cambia (se reemplazan los `Promise.resolve(...)` por `fetch(...)`).
+**Ninguna pantalla importa un mock directamente.** Todo pasa por `src/services/reportes.ts`. Hoy esas funciones devuelven datos de `src/mocks/`; el día que la cátedra publique la API real, ese es el único archivo que cambia (se reemplazan los `Promise.resolve(...)` por `fetch(...)`).
 
 ```tsx
 // ❌ mal
 import { reportesMock } from '@/mocks/reportes.mock';
 
 // ✅ bien
-import { listarReportes } from '@/servicesreportes';
+import { listarReportes } from '@/services/reportes';
 ```
 
-Los servicios son **asíncronos desde el día 1**, aunque hoy respondan al instante — así las pantallas ya manejan bien carga/vacío/error.
+Los services son **asíncronos desde el día 1**, aunque hoy respondan al instante — así las pantallas ya manejan bien carga/vacío/error.
 
-### Tipos y estados oficiales
+### types y estados oficiales
 
 Los 5 estados de un reporte son los que define el PRD de la cátedra, no los inventamos nosotros: `recibido`, `en_revision`, `asignado`, `resuelto`, `rechazado`. Están en `src/types/index.ts`, y sus colores/etiquetas en `src/constants/dominio.ts` (`ColorEstado`, `EtiquetaEstado`) — usar siempre esas constantes, no hardcodear colores nuevos.
 
@@ -152,7 +153,7 @@ Cualquiera del equipo con acceso al proyecto en expo.dev puede correr el build, 
 
 - [ ] Pantallas con Expo Router cubriendo el PRD.
 - [ ] Registro/login con sesión persistente (`expo-secure-store` + `expo-local-authentication`).
-- [ ] Capa de servicios con estados de carga/vacío/error visibles.
+- [ ] Capa de services con estados de carga/vacío/error visibles.
 - [ ] `expo-camera`/`expo-image-picker` + `expo-file-system` (API nueva: `File`, `Directory`, `Paths`).
 - [ ] `expo-location` + `react-native-maps`, usable sin permiso de ubicación.
 - [ ] `expo-notifications` disparadas por un hecho real.
