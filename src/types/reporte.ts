@@ -1,5 +1,3 @@
-// src/tipos/reporte.ts
-
 export interface Coordenadas {
   latitud: number;
   longitud: number;
@@ -8,15 +6,15 @@ export interface Coordenadas {
 export interface Foto {
   id: string;
   url: string;
-  momento: "problema" | "arreglo";
+  momento: 'problema' | 'arreglo';
 }
 
 export type EstadoReporte =
-  | "recibido"
-  | "en_revision"
-  | "asignado"
-  | "resuelto"
-  | "rechazado";
+  | 'recibido'
+  | 'en_revision'
+  | 'asignado'
+  | 'resuelto'
+  | 'rechazado';
 
 export interface Reporte {
   id: string;
@@ -35,4 +33,13 @@ export interface Reporte {
   adhesiones: number;
   creadoEn: string;
   sincronizado: boolean;
+}
+
+export interface CambioDeEstado {
+  id: string;
+  reporteId: string;
+  estado: EstadoReporte;
+  comentario: string | null;
+  operadorId: string | null;
+  fechaHora: string;
 }

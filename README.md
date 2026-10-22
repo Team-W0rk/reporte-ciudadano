@@ -66,6 +66,7 @@ src/
 ### La regla más importante del proyecto
 
 **Ninguna pantalla importa un mock directamente.** Todo pasa por `src/services/reportes.ts`. Hoy esas funciones devuelven datos de `src/mocks/`; el día que la cátedra publique la API real, ese es el único archivo que cambia (se reemplazan los `Promise.resolve(...)` por `fetch(...)`).
+**Ninguna pantalla importa un mock directamente.** Todo pasa por `src/services/reportes.ts`. Hoy esas funciones devuelven datos de `src/mocks/`; el día que la cátedra publique la API real, ese es el único archivo que cambia (se reemplazan los `Promise.resolve(...)` por `fetch(...)`).
 
 ```tsx
 // ❌ mal
