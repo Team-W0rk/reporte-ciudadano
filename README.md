@@ -53,9 +53,9 @@ src/
     (tabs)/            # mapa, mis-reportes, perfil             [Dev 2 / Dev 3]
     reportes/          # nuevo.tsx, [id].tsx (detalle)          [Dev 2 / Dev 3]
     operador/          # bandeja municipal, rol operador        [Dev 3]
-  tipos/               # Interfaces de TypeScript (entidades oficiales del PRD)
+  types/               # Interfaces de TypeScript (entidades oficiales del PRD)
   mocks/               # Datos falsos, tipados contra src/tipos
-  servicios/           # ÚNICA puerta de entrada a los datos
+  services/           # ÚNICA puerta de entrada a los datos
   almacenamiento/      # wrappers de expo-secure-store / expo-sqlite (a completar)
   constants/
     theme.ts           # viene de la plantilla de Expo (Colors, Spacing, Fonts)
@@ -65,21 +65,21 @@ src/
 
 ### La regla más importante del proyecto
 
-**Ninguna pantalla importa un mock directamente.** Todo pasa por `src/servicios/reportes.ts`. Hoy esas funciones devuelven datos de `src/mocks/`; el día que la cátedra publique la API real, ese es el único archivo que cambia (se reemplazan los `Promise.resolve(...)` por `fetch(...)`).
+**Ninguna pantalla importa un mock directamente.** Todo pasa por `src/services/reportes.ts`. Hoy esas funciones devuelven datos de `src/mocks/`; el día que la cátedra publique la API real, ese es el único archivo que cambia (se reemplazan los `Promise.resolve(...)` por `fetch(...)`).
 
 ```tsx
 // ❌ mal
 import { reportesMock } from '@/mocks/reportes.mock';
 
 // ✅ bien
-import { listarReportes } from '@/servicios/reportes';
+import { listarReportes } from '@/servicesreportes';
 ```
 
 Los servicios son **asíncronos desde el día 1**, aunque hoy respondan al instante — así las pantallas ya manejan bien carga/vacío/error.
 
 ### Tipos y estados oficiales
 
-Los 5 estados de un reporte son los que define el PRD de la cátedra, no los inventamos nosotros: `recibido`, `en_revision`, `asignado`, `resuelto`, `rechazado`. Están en `src/tipos/index.ts`, y sus colores/etiquetas en `src/constants/dominio.ts` (`ColorEstado`, `EtiquetaEstado`) — usar siempre esas constantes, no hardcodear colores nuevos.
+Los 5 estados de un reporte son los que define el PRD de la cátedra, no los inventamos nosotros: `recibido`, `en_revision`, `asignado`, `resuelto`, `rechazado`. Están en `src/types/index.ts`, y sus colores/etiquetas en `src/constants/dominio.ts` (`ColorEstado`, `EtiquetaEstado`) — usar siempre esas constantes, no hardcodear colores nuevos.
 
 ### `theme.ts` vs `dominio.ts` — para qué es cada uno
 
@@ -90,7 +90,7 @@ Los 5 estados de un reporte son los que define el PRD de la cátedra, no los inv
 
 ## 5. Estilo de código
 
-- **Español para nombres de variables, funciones y archivos del dominio** (`crearReporte`, `src/tipos/index.ts`); inglés solo para términos técnicos estándar (`Props`, `useState`).
+- **Español para nombres de variables, funciones y archivos del dominio** (`crearReporte`, `src/types/index.ts`); inglés solo para términos técnicos estándar (`Props`, `useState`).
 - Formato automático con Prettier (`.prettierrc`): comillas simples, punto y coma, ancho de línea 100.
 - ESLint usa `eslint-config-expo`, la config oficial del equipo de Expo.
 - Los `TODO (Dev X - ...)` en cada pantalla marcan quién sigue esa parte y qué falta — actualizalos o borralos a medida que avanzás.
@@ -108,14 +108,14 @@ Los 5 estados de un reporte son los que define el PRD de la cátedra, no los inv
 
 ### 🔐 Dev 1 — Auth, sesión y persistencia base
 - `src/app/(auth)/` (login, registro) y `src/app/(tabs)/perfil.tsx`.
-- Servicio de auth mockeado (`src/servicios/auth.ts`, a crear siguiendo el patrón de `servicios/reportes.ts`).
+- Servicio de auth mockeado (`src/services/auth.ts`, a crear siguiendo el patrón de `services/reportes.ts`).
 - `expo-secure-store` para el token + `expo-local-authentication` para reingreso con huella/rostro (con alternativa si el dispositivo no tiene).
 - `expo-sqlite/kv-store` para preferencias (ej: el switch de avisos).
 - `expo-network` para el estado de la conexión (lo va a necesitar también Dev 2).
 
 ### 🗺️ Dev 2 — Mapa, cámara y creación de reportes
 - `src/app/(tabs)/mapa.tsx` — reemplazar la lista provisoria por `react-native-maps`, markers coloreados por `ColorEstado`.
-- `expo-location` (con manejo de permiso denegado) + detección de duplicados a 50m (`servicios/reportes.ts` → `buscarReportesCercanos`, ya armada).
+- `expo-location` (con manejo de permiso denegado) + detección de duplicados a 50m (`services/reportes.ts` → `buscarReportesCercanos`, ya armada).
 - `src/app/reportes/nuevo.tsx` — cámara (`expo-camera`/`expo-image-picker`), nota de voz (`expo-audio`), envío con `crearReporte()`.
 - Cola offline con `expo-sqlite` cuando no hay red.
 - Vibración (`expo-haptics`) al confirmar envío o detectar duplicado.
@@ -124,11 +124,11 @@ Los 5 estados de un reporte son los que define el PRD de la cátedra, no los inv
 - `src/app/(tabs)/mis-reportes.tsx` y `src/app/reportes/[id].tsx` (historial).
 - `src/app/operador/` completo: filtros, cambio de estado con comentario obligatorio, asignación a cuadrilla.
 - `expo-notifications`, disparadas por cambios reales de estado (no un botón de prueba).
-- Mantenimiento de `src/mocks/` y `src/servicios/reportes.ts` cuando haga falta una función nueva (ej: cambiar estado) — avisar en el grupo antes de cambiar la forma de una función existente, porque la usan los otros dos.
+- Mantenimiento de `src/mocks/` y `src/services/reportes.ts` cuando haga falta una función nueva (ej: cambiar estado) — avisar en el grupo antes de cambiar la forma de una función existente, porque la usan los otros dos.
 
 ### Puntos de integración
-1. **Semana 1:** los 3 revisan `src/tipos/index.ts` y los mocks (ya están armados, si falta algo se agrega ahí).
-2. Antes de tocar `servicios/reportes.ts`, avisar en el grupo.
+1. **Semana 1:** los 3 revisan `src/types/index.ts` y los mocks (ya están armados, si falta algo se agrega ahí).
+2. Antes de tocar `services/reportes.ts`, avisar en el grupo.
 3. **Primer build de EAS una semana antes de la entrega** (`eas build --platform android --profile preview`) — la cátedra avisa que el primer intento casi siempre falla por algo chico.
 
 ---
