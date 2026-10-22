@@ -1,7 +1,7 @@
 import { Stack } from 'expo-router';
 
-// TODO (Dev 3 - Bandeja del operador): verificar que el usuario logueado
-// tenga rol "operador" antes de dejarlo entrar a este grupo.
+// TODO (Dev 1): verificar acá que el usuario logueado tenga rol "operador"
+// antes de dejarlo entrar a este grupo (redirigir a /(tabs) si no lo tiene).
 export default function OperadorLayout() {
   return (
     <Stack>
