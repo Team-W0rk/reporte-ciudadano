@@ -3,7 +3,6 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 
-import { configurarNotificaciones } from '@/servicios/notificaciones';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -11,7 +10,6 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
 
   useEffect(() => {
-    configurarNotificaciones();
     SplashScreen.hideAsync();
   }, []);
 
