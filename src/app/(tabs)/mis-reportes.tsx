@@ -1,87 +1,75 @@
-import { router } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { router, Stack } from 'expo-router';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { ColorEstado, EtiquetaEstado } from '@/constants/dominio';
-import { usuarioActualMock } from '@/mocks/usuarios.mock';
-import { listarReportesDeUsuario } from '@/servicios/reportes';
-import { Reporte } from '@/tipos';
+import { ColorPrimario } from '@/constants/dominio';
 
-// TODO (Dev 1): reemplazar usuarioActualMock por el usuario real de la sesión
-// una vez que el módulo de auth esté conectado.
 export default function MisReportesScreen() {
-  const [reportes, setReportes] = useState<Reporte[] | null>(null);
-
-  const cargar = useCallback(() => {
-    listarReportesDeUsuario(usuarioActualMock.id).then((datos) =>
-      setReportes([...datos].sort((a, b) => b.creadoEn.localeCompare(a.creadoEn))),
-    );
-  }, []);
-
-  useEffect(() => {
-    cargar();
-  }, [cargar]);
-
-  if (reportes === null) {
-    return (
-      <View style={styles.centrado}>
-        <Text>Cargando tus reportes…</Text>
-      </View>
-    );
-  }
-
-  if (reportes.length === 0) {
-    return (
-      <View style={styles.centrado}>
-        <Text>Todavía no hiciste ningún reporte.</Text>
-      </View>
-    );
-  }
-
-  const enCurso = reportes.filter((r) => r.estado !== 'resuelto' && r.estado !== 'rechazado');
-  const finalizados = reportes.filter((r) => r.estado === 'resuelto' || r.estado === 'rechazado');
-
   return (
-    <FlatList
-      contentContainerStyle={{ padding: 16 }}
-      data={[...enCurso, ...finalizados]}
-      keyExtractor={(item) => item.id}
-      ListHeaderComponent={
-        enCurso.length > 0 ? <Text style={styles.seccion}>En curso</Text> : null
-      }
-      renderItem={({ item, index }) => (
-        <>
-          {index === enCurso.length && finalizados.length > 0 && (
-            <Text style={styles.seccion}>Finalizados</Text>
-          )}
-          <Pressable style={styles.item} onPress={() => router.push(`/reportes/${item.id}`)}>
-            <View style={[styles.puntoEstado, { backgroundColor: ColorEstado[item.estado] }]} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.itemTitulo}>{item.direccion}</Text>
-              <Text style={styles.itemSubtitulo}>
-                {EtiquetaEstado[item.estado]}
-                {!item.sincronizado ? ' · sin sincronizar' : ''}
-              </Text>
-            </View>
-          </Pressable>
-        </>
-      )}
-    />
+    <>
+      <Stack.Screen options={{ title: 'Mis reportes' }} />
+
+      <View style={styles.contenedor}>
+        <Ionicons
+          name="clipboard-outline"
+          size={56}
+          color={ColorPrimario}
+        />
+
+        <Text style={styles.titulo}>Mis reportes</Text>
+
+        <Text style={styles.descripcion}>
+          Acá vas a poder consultar los problemas que reportaste y
+          seguir el estado de cada uno.
+        </Text>
+
+        <Pressable
+          style={styles.boton}
+          onPress={() => router.push('/reportes/nuevo')}
+        >
+          <Ionicons name="add-circle-outline" size={20} color="#FFFFFF" />
+          <Text style={styles.textoBoton}>Crear un reporte</Text>
+        </Pressable>
+      </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  centrado: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
-  seccion: { fontSize: 13, fontWeight: '700', color: '#888', marginTop: 12, marginBottom: 4 },
-  item: {
+  contenedor: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    padding: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  titulo: {
+    marginTop: 20,
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1F2937',
+  },
+  descripcion: {
+    marginTop: 12,
+    marginBottom: 24,
+    fontSize: 15,
+    lineHeight: 22,
+    color: '#6B7280',
+    textAlign: 'center',
+  },
+  boton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: ColorPrimario,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 10,
   },
-  puntoEstado: { width: 10, height: 10, borderRadius: 5 },
-  itemTitulo: { fontSize: 15, fontWeight: '600' },
-  itemSubtitulo: { fontSize: 13, color: '#666' },
+  textoBoton: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
+  },
 });
