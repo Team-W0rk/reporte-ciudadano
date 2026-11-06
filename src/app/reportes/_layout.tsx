@@ -4,7 +4,7 @@ export default function ReportesLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="nuevo" />
-      <Stack.Screen name="[id]" />
+      <Stack.Screen name="detalle/[id]" />
     </Stack>
   );
 }

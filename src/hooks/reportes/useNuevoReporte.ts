@@ -3,18 +3,20 @@ import { Alert } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import * as Network from 'expo-network';
 import { router } from 'expo-router';
+import { copiarAPersistente } from '@/services/archivosPersistentes';
+import { cargarTiposConCache } from '@/services/catalogos';
 import {
   encolarReporte,
   esErrorDeRed,
-  sincronizarPendientes,
+  guardarAdhesionLocal,
 } from '@/services/colaOffline';
 import { obtenerMensajeError } from '@/services/errores';
 import {
   buscarReportesCercanos,
   crearReporte,
-  listarTiposDeReporte,
   sumarseAReporte,
 } from '@/services/reportesCreacion';
+import { useAuth } from '@/hooks/auth/useAuth';
 import type { Coordenadas, Reporte, TipoDeReporte } from '@/types';
 
 interface DatosFormulario {
@@ -22,8 +24,6 @@ interface DatosFormulario {
   audioUri: string | null;
   direccion: string;
 }
-
-const obtenerToken = () => process.env.EXPO_PUBLIC_TOKEN_DEMO ?? '';
 
 export default function useNuevoReporte(
   coordenadas: Coordenadas | null,
@@ -35,107 +35,104 @@ export default function useNuevoReporte(
   const [ignorarDuplicados, setIgnorarDuplicados] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [cargandoTipos, setCargandoTipos] = useState(true);
-  const sincronizando = useRef(false);
-  
+
+  const { token, usuario } = useAuth();
+  const [errorTipos, setErrorTipos] = useState(false);
+
+  // El ID se genera una sola vez para conservarlo durante los reintentos.
   const idReporte = useRef(
     `rep-app-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
   );
-  
-  const intentarSincronizar = useCallback(async () => {
-    if (sincronizando.current) return;
-    const token = obtenerToken();
-    if (!token) return;
-    sincronizando.current = true;
-    try {
-      const estadoRed = await Network.getNetworkStateAsync();
-      const hayInternet =
-        estadoRed.isConnected === true &&
-        estadoRed.isInternetReachable !== false;
 
-      if (!hayInternet) return;
-      await sincronizarPendientes(token);
-    } catch (error) {
-      console.warn('No se pudieron sincronizar los reportes pendientes.');
+  // Los tipos de problema se guardan en el teléfono: sin señal se usan los
+  // últimos descargados. Solo falla si la app nunca se abrió con internet.
+  const cargarTipos = useCallback(async () => {
+    setCargandoTipos(true);
+    setErrorTipos(false);
+
+    try {
+      setTipos(await cargarTiposConCache());
+    } catch {
+      setErrorTipos(true);
     } finally {
-      sincronizando.current = false;
+      setCargandoTipos(false);
     }
   }, []);
 
   useEffect(() => {
-    let activo = true;
-    async function cargarTipos() {
-      try {
-        const respuesta = await listarTiposDeReporte();
-        if (activo) setTipos(respuesta.datos);
-      } catch (error) {
-        if (activo) {
-          Alert.alert(
-            'No pudimos cargar los tipos',
-            obtenerMensajeError(error),
-          );
-        }
-      } finally {
-        if (activo) setCargandoTipos(false);
-      }
-    }
-
     void cargarTipos();
-    void intentarSincronizar();
 
+    // Si arrancó sin conexión y no había categorías guardadas, se cargan
+    // solas apenas vuelve la red.
     const suscripcion = Network.addNetworkStateListener((estado) => {
-      const hayInternet =
-        estado.isConnected === true &&
-        estado.isInternetReachable !== false;
-      if (hayInternet) {
-        void intentarSincronizar();
+      if (estado.isConnected === true && estado.isInternetReachable !== false) {
+        void cargarTipos();
       }
     });
-    return () => {
-      activo = false;
-      suscripcion.remove();
-    };
-  }, [intentarSincronizar]);
+
+    return () => suscripcion.remove();
+  }, [cargarTipos]);
+
+  // La subida de los reportes guardados sin señal la hace, en cualquier
+  // pantalla, useSincronizacionAutomatica (montado en el layout raíz).
 
   useEffect(() => {
     if (!coordenadas) {
       setCercanos([]);
       return;
     }
+
     let activo = true;
     const ubicacion = coordenadas;
+
     async function cargarCercanos() {
       try {
         const respuesta = await buscarReportesCercanos(ubicacion);
-        if (!activo) return;
+
+        if (!activo) {
+          return;
+        }
+
         setCercanos(respuesta.datos);
+
         if (respuesta.datos.length > 0) {
           void Haptics.notificationAsync(
             Haptics.NotificationFeedbackType.Warning,
           );
         }
       } catch {
-        if (activo) setCercanos([]);
+        if (activo) {
+          setCercanos([]);
+        }
       }
     }
 
     void cargarCercanos();
+
     return () => {
       activo = false;
     };
   }, [coordenadas]);
 
+  /**
+   * Permite al usuario adherirse a un reporte existente.
+   */
   const sumarmeA = async (reporte: Reporte) => {
-    try {
-      const token = obtenerToken();
-      if (!token) {
-        Alert.alert(
-          'Iniciá sesión',
-          'Necesitás una sesión activa para sumarte a un reporte.',
-        );
-        return;
-      }
+    if (!token || !usuario) {
+      Alert.alert(
+        'Iniciá sesión',
+        'Necesitás una sesión activa para sumarte a un reporte.',
+      );
+      return;
+    }
 
+    try {
+      // Primero registramos la adhesión en la API.
       await sumarseAReporte(reporte.id, token);
+
+      // Si la API responde correctamente, guardamos la adhesión local.
+      await guardarAdhesionLocal(usuario.id, reporte.id);
+
       await Haptics.notificationAsync(
         Haptics.NotificationFeedbackType.Success,
       );
@@ -147,24 +144,49 @@ export default function useNuevoReporte(
 
       router.back();
     } catch (error) {
-      Alert.alert('No pudimos sumarte', obtenerMensajeError(error));
+      Alert.alert(
+        'No pudimos sumarte',
+        obtenerMensajeError(error),
+      );
     }
   };
 
+  /**
+   * Crea un reporte nuevo o lo guarda localmente si no hay conexión.
+   */
   const enviar = async ({
     fotoUri,
     audioUri,
     direccion,
   }: DatosFormulario) => {
-    if (enviando) return;
+    if (enviando) {
+      return;
+    }
+
+    if (!token || !usuario) {
+      Alert.alert(
+        'Iniciá sesión',
+        'Necesitás una sesión activa para enviar un reporte.',
+      );
+      return;
+    }
+
     if (!tipoId) {
-      Alert.alert('Falta el tipo', 'Elegí qué tipo de problema es.');
+      Alert.alert(
+        'Falta el tipo',
+        'Elegí qué tipo de problema es.',
+      );
       return;
     }
+
     if (!fotoUri) {
-      Alert.alert('Falta la foto', 'Sacá una foto del problema.');
+      Alert.alert(
+        'Falta la foto',
+        'Sacá una foto del problema.',
+      );
       return;
     }
+
     if (!coordenadas) {
       Alert.alert(
         'Falta la ubicación',
@@ -172,13 +194,18 @@ export default function useNuevoReporte(
       );
       return;
     }
+
     if (!direccion.trim()) {
-      Alert.alert('Falta la dirección', 'Escribí la calle y la altura.');
+      Alert.alert(
+        'Falta la dirección',
+        'Escribí la calle y la altura.',
+      );
       return;
     }
 
     const datos = {
       id: idReporte.current,
+      usuarioId: usuario.id,
       tipoId,
       descripcion: descripcion.trim() || null,
       audioUrl: audioUri,
@@ -187,21 +214,54 @@ export default function useNuevoReporte(
       direccion: direccion.trim(),
     };
 
-    setEnviando(true);
-    try {
-      const token = obtenerToken();
-      if (!token) {
-        await encolarReporte(datos);
+    // Guarda el reporte en el teléfono para subirlo solo cuando haya señal.
+    // La foto y el audio se copian antes a una carpeta que el sistema no limpia.
+    const guardarParaDespues = async () => {
+      try {
+        await encolarReporte({
+          ...datos,
+          fotoUri: await copiarAPersistente(datos.fotoUri),
+          audioUrl: datos.audioUrl ? await copiarAPersistente(datos.audioUrl) : null,
+        });
+
+        await Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Success,
+        );
+
         Alert.alert(
           'Reporte guardado',
-          'No hay una sesión disponible. El reporte quedó guardado en el teléfono y podrá enviarse cuando se integre la autenticación.',
+          'No hay señal ahora. Lo guardamos en tu teléfono y se envía solo apenas vuelva la conexión.',
         );
+
         router.back();
+      } catch (errorCola) {
+        await Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Error,
+        );
+
+        Alert.alert(
+          'No pudimos guardar el reporte',
+          obtenerMensajeError(errorCola),
+        );
+      }
+    };
+
+    setEnviando(true);
+
+    try {
+      // Sin conexión no se espera el tiempo de espera de la red: va directo a la cola.
+      const estadoRed = await Network.getNetworkStateAsync();
+
+      if (estadoRed.isConnected === false) {
+        await guardarParaDespues();
         return;
       }
 
       await crearReporte(datos, token);
-      await Haptics.notificationAsync( Haptics.NotificationFeedbackType.Success );
+
+      await Haptics.notificationAsync(
+        Haptics.NotificationFeedbackType.Success,
+      );
 
       Alert.alert(
         'Reporte enviado',
@@ -211,26 +271,8 @@ export default function useNuevoReporte(
       router.back();
     } catch (error) {
       if (esErrorDeRed(error)) {
-        try {
-          await encolarReporte(datos);
-          await Haptics.notificationAsync(  Haptics.NotificationFeedbackType.Success );
-
-          Alert.alert(
-            'Sin conexión',
-            'Guardamos tu reporte en el teléfono. Se enviará cuando vuelva la red.',
-          );
-
-          router.back();
-        } catch (errorCola) {
-          await Haptics.notificationAsync(
-            Haptics.NotificationFeedbackType.Error,
-          );
-
-          Alert.alert(
-            'No pudimos guardar el reporte',
-            obtenerMensajeError(errorCola),
-          );
-        }
+        // Señal intermitente: el envío falló a mitad de camino, se guarda igual.
+        await guardarParaDespues();
       } else {
         await Haptics.notificationAsync(
           Haptics.NotificationFeedbackType.Error,
@@ -246,7 +288,8 @@ export default function useNuevoReporte(
     }
   };
 
-  const hayDuplicados = cercanos.length > 0 && !ignorarDuplicados;
+  const hayDuplicados =
+    cercanos.length > 0 && !ignorarDuplicados;
 
   return {
     tipos,
@@ -260,9 +303,9 @@ export default function useNuevoReporte(
     hayDuplicados,
     enviando,
     cargandoTipos,
+    errorTipos,
+    recargarTipos: cargarTipos,
     sumarmeA,
     enviar,
   };
 }
-
-
