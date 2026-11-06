@@ -1,31 +1,140 @@
-import { useEffect, useState } from 'react';
-import { FlatList, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import { useState } from 'react';
+import {
+  ActivityIndicator,
+  Linking,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import MapView from 'react-native-maps';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AvisoMapa } from '@/components/mapa/AvisoMapa';
+import { BotonNuevoReporte } from '@/components/mapa/BotonNuevoReporte';
+import { ContadorReportes } from '@/components/mapa/ContadorReportes';
+import { EncabezadoMapa } from '@/components/mapa/EncabezadoMapa';
+import { FiltrosEstado, type FiltroReporte } from '@/components/mapa/FiltrosEstado';
+import { IndicadorCarga } from '@/components/mapa/IndicadorCarga';
+import { MarcadoresReportes } from '@/components/mapa/MarcadoresReportes';
+import { TarjetaReporteSeleccionado } from '@/components/mapa/TarjetaReporteSeleccionado';
+import { ColorPrimario } from '@/constants/dominio';
+import { useReportesMapa } from '@/hooks/mapas/useReportesMapa';
+import { useUbicacionInicial } from '@/hooks/mapas/useUbicacionInicial';
+import type { Reporte } from '@/types';
 
-import { listarReportes } from '@/servicios/reportes';
-import { Reporte } from '@/tipos';
-
-// TODO (Dev 2 - Mapa y creación de reportes):
-// - Reemplazar esta lista por <MapView> de react-native-maps, con markers
-//   coloreados por estado (ColorEstado, en src/constants/dominio.ts).
-// - expo-location para centrar el mapa; usable aunque nieguen el permiso.
-// - Detección de duplicados a 50m antes de crear un reporte
-//   (servicios/reportes.ts -> buscarReportesCercanos, ya armada).
 export default function MapaScreen() {
-  const [reportes, setReportes] = useState<Reporte[] | null>(null);
+  const { regionInicial, permisoDenegado } = useUbicacionInicial();
+  const { reportes, cargando, error, cargarRegion } = useReportesMapa();
+  const [filtro, setFiltro] = useState<FiltroReporte>('todos');
+  const [reporteSeleccionado, setReporteSeleccionado] = useState<Reporte | null>(null);
+  const insets = useSafeAreaInsets();
+  const reportesFiltrados =
+    filtro === 'todos'
+      ? reportes
+      : reportes.filter((reporte) => reporte.estado === filtro);
 
-  useEffect(() => {
-    listarReportes().then((respuesta) => setReportes(respuesta.datos));
-  }, []);
+  if (!regionInicial) {
+    return (
+      <View style={styles.cargandoInicial}>
+        <ActivityIndicator size="large" color={ColorPrimario} />
+        <Text style={styles.textoInicial}>Preparando el mapa...</Text>
+      </View>
+    );
+  }
 
   return (
-    <View style={{ flex: 1, padding: 16 }}>
-      <Text style={{ fontWeight: '700', marginBottom: 8 }}>Mapa (Dev 2) — lista provisoria</Text>
-      <FlatList
-        data={reportes ?? []}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <Text style={{ paddingVertical: 6 }}>{item.direccion} — {item.estado}</Text>}
-        ListEmptyComponent={<Text>Cargando…</Text>}
+    <View style={styles.pantalla}>
+      <MapView
+        style={StyleSheet.absoluteFill}
+        initialRegion={regionInicial}
+        showsUserLocation={!permisoDenegado}
+        showsMyLocationButton={!permisoDenegado}
+        onMapReady={() => void cargarRegion(regionInicial)}
+        onRegionChangeComplete={(region) => void cargarRegion(region)}
+        onPress={() => setReporteSeleccionado(null)}
+      >
+        <MarcadoresReportes
+          reportes={reportesFiltrados}
+          onSeleccionar={setReporteSeleccionado}
+        />
+      </MapView>
+
+      <View style={[ styles.panelSuperior, { top: insets.top }, ]}>
+        <EncabezadoMapa />
+        <FiltrosEstado
+          seleccionado={filtro}
+          onCambiar={(nuevoFiltro) => {
+            setFiltro(nuevoFiltro);
+            setReporteSeleccionado(null);
+          }}
+        />
+      </View>
+
+      {permisoDenegado && (
+        <AvisoMapa
+          tipo="ubicacion"
+          onAccion={() => void Linking.openSettings()}
+        />
+      )}
+
+      {error && (
+        <AvisoMapa
+          tipo="error"
+          mensaje={error}
+          onAccion={() => void cargarRegion(regionInicial)}
+        />
+      )}
+
+      {cargando && <IndicadorCarga />}
+
+      <ContadorReportes cantidad={reportesFiltrados.length} />
+
+      {reporteSeleccionado && (
+        <TarjetaReporteSeleccionado
+          reporte={reporteSeleccionado}
+          onCerrar={() => setReporteSeleccionado(null)}
+          onVerDetalle={() =>
+            router.push(`/reportes/${reporteSeleccionado.id}`)
+          }
+        />
+      )}
+
+      <BotonNuevoReporte
+        onPress={() => router.push('/reportes/nuevo')}
       />
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  pantalla: {
+    flex: 1,
+    backgroundColor: '#F5F6F8',
+  },
+  panelSuperior: {
+    position: 'absolute',
+    left: 12,
+    right: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 8,
+    elevation: 5,
+    shadowColor: '#16324F',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+  },
+  cargandoInicial: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#F5F6F8',
+  },
+  textoInicial: {
+    color: '#687076',
+    fontSize: 14,
+  },
+});
