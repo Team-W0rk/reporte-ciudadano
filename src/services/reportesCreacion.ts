@@ -135,19 +135,38 @@ export async function crearReporte(
 
   const id = datos.id ?? `rep-app-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-  // TODO: confirmar los nombres exactos del cuerpo en http://<ip>:3000/docs
-  const respuesta = await api.post<RespuestaExitosa<Reporte>>(
-    '/reportes',
-    {
-      id,
-      tipoId: datos.tipoId,
-      descripcion: datos.descripcion,
-      audioUrl,
-      fotos: fotoExtraUrl ? [{ url: fotoUrl }, { url: fotoExtraUrl }] : [{ url: fotoUrl }],
-      coordenadas: datos.coordenadas,
-      direccion: datos.direccion,
-    },
-    { headers: conToken(token) },
-  );
-  return respuesta.data;
+const cuerpo = {
+  id,
+  tipoId: datos.tipoId,
+  descripcion: datos.descripcion,
+  audioUrl,
+  fotos: fotoExtraUrl
+    ? [
+        {
+          id: `fot-${id}-1`,
+          url: fotoUrl,
+        },
+        {
+          id: `fot-${id}-2`,
+          url: fotoExtraUrl,
+        },
+      ]
+    : [
+        {
+          id: `fot-${id}-1`,
+          url: fotoUrl,
+        },
+      ],
+  coordenadas: datos.coordenadas,
+  direccion: datos.direccion,
+  creadoEn: new Date().toISOString(),
+};
+
+const respuesta = await api.post<RespuestaExitosa<Reporte>>(
+  '/reportes',
+  cuerpo,
+  { headers: conToken(token) },
+);
+
+return respuesta.data;
 }
