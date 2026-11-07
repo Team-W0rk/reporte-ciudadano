@@ -10,7 +10,8 @@ import {
   View,
 } from 'react-native';
 import * as NavigationBar from 'expo-navigation-bar';
-import { useEffect } from 'react';
+import * as Network from 'expo-network';
+import { useEffect, useState } from 'react';
 import { Stack, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ColorBorde, ColorPrimario } from '@/constants/dominio';
@@ -30,6 +31,10 @@ export default function NuevoReporteScreen() {
   const reporte = useNuevoReporte(ubicacion.coordenadas);
   const foto = useAdjuntoFoto();
   const audio = useNotaVoz();
+  const red = Network.useNetworkState();
+  const sinConexion = red.isConnected === false;
+  // El mapa de la ubicación necesita el gesto de arrastre: se frena el scroll mientras se lo toca.
+  const [scrollHabilitado, setScrollHabilitado] = useState(true);
   const enviarReporte = () => {
     void reporte.enviar({
       fotoUri: foto.fotoUri,
@@ -73,6 +78,7 @@ export default function NuevoReporteScreen() {
           ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          scrollEnabled={scrollHabilitado}
         >
           <View style={styles.encabezado}>
            <View style={styles.iconoEncabezado}>
@@ -86,6 +92,14 @@ export default function NuevoReporteScreen() {
               podamos identificar y resolver el inconveniente.
             </Text>
           </View>
+          {sinConexion && (
+            <View style={styles.avisoSinConexion}>
+              <Text style={styles.textoAvisoSinConexion}>
+                Sin señal. Podés completar el reporte igual: se guarda en tu
+                teléfono y se envía solo cuando vuelva la conexión.
+              </Text>
+            </View>
+          )}
           <View style={styles.tarjeta}>
             <SelectorTipoReporte
               tipos={reporte.tipos}
@@ -98,6 +112,21 @@ export default function NuevoReporteScreen() {
                 <Text style={styles.textoCargando}>
                   Cargando categorías…
                 </Text>
+              </View>
+            )}
+            {reporte.errorTipos && reporte.tipos.length === 0 && (
+              <View style={styles.cargando}>
+                <Text style={styles.textoCargando}>
+                  Todavía no descargamos las categorías. Hace falta conectarse a
+                  internet una vez para guardarlas; después funcionan sin señal.
+                </Text>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => void reporte.recargarTipos()}
+                  style={styles.botonReintentar}
+                >
+                  <Text style={styles.textoReintentar}>Reintentar</Text>
+                </Pressable>
               </View>
             )}
           </View>
@@ -113,8 +142,12 @@ export default function NuevoReporteScreen() {
               direccion={ubicacion.direccion}
               ubicacionDenegada={ubicacion.ubicacionDenegada}
               cargandoUbicacion={ubicacion.cargandoUbicacion}
+              regionInicial={ubicacion.regionInicial}
+              modoManual={ubicacion.modoManual}
               onCambiarDireccion={ubicacion.setDireccion}
+              onElegirPunto={ubicacion.elegirPunto}
               onReintentar={() => void ubicacion.obtenerUbicacion()}
+              onBloquearScroll={(bloquear) => setScrollHabilitado(!bloquear)}
             />
           </View>
           <View style={styles.tarjeta}>
@@ -174,7 +207,7 @@ export default function NuevoReporteScreen() {
               <ActivityIndicator color="#FFFFFF" />
             ) : (
               <Text style={styles.textoBotonEnviar}>
-                Enviar reporte
+                {sinConexion ? 'Guardar reporte' : 'Enviar reporte'}
               </Text>
             )}
           </Pressable>
@@ -235,8 +268,8 @@ const styles = StyleSheet.create({
     color: '#20252B',
   },
   subtitulo: {
-    fontSize: 14,
-    lineHeight: 21,
+    fontSize: 16,
+    lineHeight: 24,
     color: '#667085',
   },
   tarjeta: {
@@ -249,13 +282,40 @@ const styles = StyleSheet.create({
   },
   cargando: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
     paddingTop: 8,
   },
   textoCargando: {
-    color: '#667085',
-    fontSize: 13,
+    flexShrink: 1,
+    color: '#475467',
+    fontSize: 16,
+    lineHeight: 23,
+  },
+  avisoSinConexion: {
+    backgroundColor: '#FFF4D6',
+    borderRadius: 14,
+    padding: 14,
+  },
+  textoAvisoSinConexion: {
+    color: '#624A08',
+    fontSize: 16,
+    lineHeight: 23,
+    fontWeight: '600',
+  },
+  botonReintentar: {
+    minHeight: 48,
+    justifyContent: 'center',
+    paddingHorizontal: 18,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: ColorPrimario,
+  },
+  textoReintentar: {
+    color: ColorPrimario,
+    fontSize: 16,
+    fontWeight: '700',
   },
   tituloSeccion: {
     fontSize: 18,
@@ -263,8 +323,8 @@ const styles = StyleSheet.create({
     color: '#20252B',
   },
   descripcionSeccion: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 16,
+    lineHeight: 23,
     color: '#667085',
   },
   inputDescripcion: {
@@ -272,27 +332,27 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: ColorBorde,
     borderRadius: 12,
-    padding: 12,
-    fontSize: 15,
+    padding: 14,
+    fontSize: 18,
     color: '#20252B',
     backgroundColor: '#FFFFFF',
     marginTop: 6,
   },
   contadorCaracteres: {
     alignSelf: 'flex-end',
-    fontSize: 12,
+    fontSize: 14,
     color: '#667085',
   },
   notaObligatorios: {
     paddingHorizontal: 4,
   },
   textoObligatorios: {
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: 15,
+    lineHeight: 22,
     color: '#667085',
   },
   botonEnviar: {
-    minHeight: 52,
+    minHeight: 60,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 14,
@@ -308,22 +368,22 @@ const styles = StyleSheet.create({
   },
   textoBotonEnviar: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: '700',
   },
   ayudaDuplicados: {
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: 15,
+    lineHeight: 22,
     textAlign: 'center',
     color: '#8A6200',
   },
   botonCancelar: {
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 14,
   },
   textoCancelar: {
-    color: '#667085',
-    fontSize: 14,
+    color: '#475467',
+    fontSize: 16,
     fontWeight: '600',
   },
 });

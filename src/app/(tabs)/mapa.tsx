@@ -96,7 +96,7 @@ export default function MapaScreen() {
           reporte={reporteSeleccionado}
           onCerrar={() => setReporteSeleccionado(null)}
           onVerDetalle={() =>
-            router.push(`/reportes/${reporteSeleccionado.id}`)
+            router.push(`/reportes/detalle/${reporteSeleccionado.id}`)
           }
         />
       )}
