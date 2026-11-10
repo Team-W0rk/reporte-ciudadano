@@ -18,17 +18,21 @@ async function cargar(): Promise<ModuloNotificaciones | null> {
 
 // Cómo se muestran las notificaciones con la app abierta. Se llama una vez al arrancar.
 export async function configurarNotificaciones(): Promise<void> {
-  const Notifications = await cargar();
-  if (!Notifications) return;
+  try {
+    const Notifications = await cargar();
+    if (!Notifications) return;
 
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowBanner: true,
-      shouldShowList: true,
-      shouldPlaySound: true,
-      shouldSetBadge: false,
-    }),
-  });
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowBanner: true,
+        shouldShowList: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+      }),
+    });
+  } catch (error) {
+    console.warn('No se pudieron configurar las notificaciones:', error);
+  }
 }
 
 // En Android 13+ el cartel de permiso NO aparece si antes no existe un canal.
