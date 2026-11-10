@@ -1,10 +1,5 @@
 import type { EstadoReporte, Reporte, RespuestaExitosa, TipoDeReporte, Zona } from '@/types';
-
 import { api } from './api';
-
-// Servicios de Dev 2: mapa y creación de reportes. Mismo estilo que
-// reportes.ts: devuelven el sobre completo ({ datos, meta }) y, si el
-// endpoint pide sesión, reciben el token como parámetro.
 
 const conToken = (token: string) => ({ Authorization: `Bearer ${token}` });
 
@@ -59,10 +54,19 @@ export async function buscarReportesCercanos(
  * 201 la primera vez, 200 si ya estabas. Si el reporte es tuyo responde
  * ADHESION_A_REPORTE_PROPIO.
  */
-export async function sumarseAReporte(reporteId: string, token: string): Promise<void> {
-  await api.post(`/reportes/${encodeURIComponent(reporteId)}/adhesiones`, undefined, {
-    headers: conToken(token),
-  });
+export async function sumarseAReporte(
+  reporteId: string,
+  token: string,
+): Promise<boolean> {
+  const respuesta = await api.post(
+    `/reportes/${encodeURIComponent(reporteId)}/adhesiones`,
+    undefined,
+    {
+      headers: conToken(token),
+    },
+  );
+
+  return respuesta.status === 201;
 }
 
 const MIME_POR_EXTENSION: Record<string, string> = {
@@ -84,38 +88,25 @@ export async function subirArchivo(uriLocal: string, token: string): Promise<str
   }
 
   const formulario = new FormData();
-  // React Native acepta { uri, name, type } como archivo de un formulario.
   formulario.append('archivo', { uri: uriLocal, name: `archivo.${extension}`, type: tipo } as unknown as Blob);
 
   const respuesta = await api.post<RespuestaExitosa<{ url: string }>>('/archivos', formulario, {
-    // api.ts fija application/json por defecto: acá hay que pisarlo.
     headers: { ...conToken(token), 'Content-Type': 'multipart/form-data' },
   });
   return respuesta.data.datos.url;
 }
 
 export interface DatosNuevoReporte {
-  /**
-   * Para la cola offline: generalo UNA vez al guardar el reporte en SQLite y
-   * reusalo en cada reintento; la API no duplica si el id se repite.
-   */
   id?: string;
   tipoId: string;
   descripcion: string | null;
-  /** Uri local del audio grabado, o una url ya subida. */
   audioUrl: string | null;
   fotoUri: string;
-  /** Segunda foto, opcional (por ejemplo, tomada de lejos). */
   fotoExtraUri?: string | null;
   coordenadas: { latitud: number; longitud: number };
   direccion: string;
 }
 
-/**
- * Sube la foto (y el audio, si hay) y después crea el reporte.
- * La zona la calcula la API; fuera de la ciudad responde FUERA_DE_LA_CIUDAD
- * (el mensaje sale con obtenerMensajeError).
- */
 export async function crearReporte(
   datos: DatosNuevoReporte,
   token: string,
@@ -135,38 +126,37 @@ export async function crearReporte(
 
   const id = datos.id ?? `rep-app-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-const cuerpo = {
-  id,
-  tipoId: datos.tipoId,
-  descripcion: datos.descripcion,
-  audioUrl,
-  fotos: fotoExtraUrl
-    ? [
-        {
-          id: `fot-${id}-1`,
-          url: fotoUrl,
-        },
-        {
-          id: `fot-${id}-2`,
-          url: fotoExtraUrl,
-        },
-      ]
-    : [
-        {
-          id: `fot-${id}-1`,
-          url: fotoUrl,
-        },
-      ],
-  coordenadas: datos.coordenadas,
-  direccion: datos.direccion,
-  creadoEn: new Date().toISOString(),
-};
+  const cuerpo = {
+    id,
+    tipoId: datos.tipoId,
+    descripcion: datos.descripcion,
+    audioUrl,
+    fotos: fotoExtraUrl
+      ? [
+          {
+            id: `fot-${id}-1`,
+            url: fotoUrl,
+          },
+          {
+            id: `fot-${id}-2`,
+            url: fotoExtraUrl,
+          },
+        ]
+      : [
+          {
+            id: `fot-${id}-1`,
+            url: fotoUrl,
+          },
+        ],
+    coordenadas: datos.coordenadas,
+    direccion: datos.direccion,
+    creadoEn: new Date().toISOString(),
+  };
 
-const respuesta = await api.post<RespuestaExitosa<Reporte>>(
-  '/reportes',
-  cuerpo,
-  { headers: conToken(token) },
-);
-
-return respuesta.data;
+  const respuesta = await api.post<RespuestaExitosa<Reporte>>(
+    '/reportes',
+    cuerpo,
+    { headers: conToken(token) },
+  );
+  return respuesta.data;
 }

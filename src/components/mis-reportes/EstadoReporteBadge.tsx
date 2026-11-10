@@ -1,6 +1,4 @@
-
 import { StyleSheet, Text, View } from 'react-native';
-
 import type { EstadoReporte } from '@/types';
 
 interface Props {

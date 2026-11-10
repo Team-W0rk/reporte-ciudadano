@@ -1,6 +1,5 @@
 import axios from 'axios';
 import * as SQLite from 'expo-sqlite';
-
 import { borrarSiEsPersistente } from './archivosPersistentes';
 import { obtenerMensajeError } from './errores';
 import {
@@ -51,36 +50,28 @@ function abrir(): Promise<SQLite.SQLiteDatabase> {
       const columnas = await db.getAllAsync<{ name: string }>(
         'PRAGMA table_info(reportes_pendientes)',
       );
-
       if (!columnas.some((columna) => columna.name === 'usuario_id')) {
         await db.execAsync(`
           ALTER TABLE reportes_pendientes
           ADD COLUMN usuario_id TEXT;
         `);
       }
-
       return db;
     },
   );
-
   return base;
 }
 
-/**
- * Indica si Axios no recibió respuesta del servidor.
- */
+/** Indica si Axios no recibió respuesta del servidor. */
 export function esErrorDeRed(error: unknown): boolean {
   return axios.isAxiosError(error) && !error.response;
 }
 
-/**
- * Guarda un reporte para enviarlo cuando vuelva la conexión.
- */
+/**  Guarda un reporte para enviarlo cuando vuelva la conexión. */
 export async function encolarReporte(
   reporte: ReportePendiente,
 ): Promise<void> {
   const db = await abrir();
-
   await db.runAsync(
     `INSERT OR REPLACE INTO reportes_pendientes
       (id, usuario_id, datos, creado_en)
@@ -100,7 +91,6 @@ export async function contarPendientes(
   usuarioId?: string,
 ): Promise<number> {
   const db = await abrir();
-
   const fila = usuarioId
     ? await db.getFirstAsync<{ total: number }>(
         `SELECT COUNT(*) AS total
@@ -111,12 +101,17 @@ export async function contarPendientes(
     : await db.getFirstAsync<{ total: number }>(
         'SELECT COUNT(*) AS total FROM reportes_pendientes',
       );
-
   return fila?.total ?? 0;
+}
+
+export interface ReporteSincronizado {
+  id: string;
+  codigo: string;
 }
 
 export interface ResultadoSincronizacion {
   enviados: number;
+  reportesEnviados: ReporteSincronizado[];
   descartados: {
     id: string;
     mensaje: string;
@@ -124,15 +119,12 @@ export interface ResultadoSincronizacion {
   pendientes: number;
 }
 
-/**
- * Sincroniza los reportes pendientes de un usuario.
- */
+/** Sincroniza los reportes pendientes de un usuario. */
 export async function sincronizarPendientes(
   token: string,
   usuarioId: string,
 ): Promise<ResultadoSincronizacion> {
   const db = await abrir();
-
   const filas = await db.getAllAsync<{
     id: string;
     datos: string;
@@ -146,6 +138,7 @@ export async function sincronizarPendientes(
 
   const resultado: ResultadoSincronizacion = {
     enviados: 0,
+    reportesEnviados: [],
     descartados: [],
     pendientes: 0,
   };
@@ -153,29 +146,29 @@ export async function sincronizarPendientes(
   for (const fila of filas) {
     try {
       const reporte = JSON.parse(fila.datos) as ReportePendiente;
-
       // Protección adicional ante datos inconsistentes en SQLite.
       if (reporte.usuarioId !== usuarioId) {
         continue;
       }
-
-      await crearReporte(reporte, token);
-
+      const respuesta = await crearReporte(reporte, token);
       await db.runAsync(
         'DELETE FROM reportes_pendientes WHERE id = ?',
         fila.id,
       );
-
       // Ya está en el servidor: se liberan las copias de la foto y el audio.
       await borrarSiEsPersistente(reporte.fotoUri);
+      await borrarSiEsPersistente(reporte.fotoExtraUri ?? null);
       await borrarSiEsPersistente(reporte.audioUrl);
 
       resultado.enviados += 1;
+      resultado.reportesEnviados.push({
+        id: reporte.id,
+        codigo: respuesta.datos.codigo,
+      });
     } catch (error) {
       if (esErrorDeRed(error)) {
         break;
       }
-
       const estado = axios.isAxiosError(error)
         ? error.response?.status
         : undefined;
@@ -190,7 +183,6 @@ export async function sincronizarPendientes(
       ) {
         continue;
       }
-
       // Se informa el rechazo sin borrar el reporte local.
       resultado.descartados.push({
         id: fila.id,
@@ -198,21 +190,16 @@ export async function sincronizarPendientes(
       });
     }
   }
-
   resultado.pendientes = await contarPendientes(usuarioId);
-
   return resultado;
 }
 
-/**
- * Registra localmente una adhesión realizada correctamente en la API.
- */
+/** Registra localmente una adhesión realizada correctamente en la API. */
 export async function guardarAdhesionLocal(
   usuarioId: string,
   reporteId: string,
 ): Promise<void> {
   const db = await abrir();
-
   await db.runAsync(
     `INSERT OR REPLACE INTO adhesiones_locales
       (usuario_id, reporte_id, creado_en)
@@ -223,14 +210,11 @@ export async function guardarAdhesionLocal(
   );
 }
 
-/**
- * Obtiene los IDs de los reportes a los que se adhirió un usuario.
- */
+/** Obtiene los IDs de los reportes a los que se adhirió un usuario. */
 export async function obtenerAdhesionesLocales(
   usuarioId: string,
 ): Promise<string[]> {
   const db = await abrir();
-
   const filas = await db.getAllAsync<{
     reporte_id: string;
   }>(
@@ -240,13 +224,10 @@ export async function obtenerAdhesionesLocales(
      ORDER BY creado_en DESC`,
     usuarioId,
   );
-
   return filas.map((fila) => fila.reporte_id);
 }
 
-/**
- * Guarda un catálogo (por ejemplo, los tipos de problema) para usarlo sin conexión.
- */
+/**  Guarda un catálogo (por ejemplo, los tipos de problema) para usarlo sin conexión. */
 export async function guardarCatalogo(
   clave: string,
   datos: unknown,
@@ -263,16 +244,12 @@ export async function guardarCatalogo(
   );
 }
 
-/**
- * Devuelve el último catálogo guardado, o null si todavía no hay ninguno.
- */
+/** Devuelve el último catálogo guardado, o null si todavía no hay ninguno. */
 export async function leerCatalogo<T>(clave: string): Promise<T | null> {
   const db = await abrir();
-
   const fila = await db.getFirstAsync<{ datos: string }>(
     'SELECT datos FROM cache_catalogos WHERE clave = ?',
     clave,
   );
-
   return fila ? (JSON.parse(fila.datos) as T) : null;
 }

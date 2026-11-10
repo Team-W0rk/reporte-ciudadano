@@ -1,5 +1,4 @@
 import { Marker } from 'react-native-maps';
-
 import { ColorEstado, EtiquetaEstado } from '@/constants/dominio';
 import type { Reporte } from '@/types';
 
