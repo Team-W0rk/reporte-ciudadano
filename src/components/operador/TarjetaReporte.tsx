@@ -1,10 +1,21 @@
-
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Reporte } from '@/types';
 
 interface TarjetaReporteProps {
   reporte: Reporte;
   onPress: () => void;
+}
+
+function obtenerEtiquetaEstado(estado: Reporte['estado']): string {
+  const etiquetas: Record<Reporte['estado'], string> = {
+    recibido: 'Recibido',
+    en_revision: 'En revisión',
+    asignado: 'Asignado',
+    resuelto: 'Finalizado',
+    rechazado: 'Rechazado',
+  };
+
+  return etiquetas[estado];
 }
 
 export function TarjetaReporte({
@@ -16,22 +27,25 @@ export function TarjetaReporte({
       <View style={styles.tarjeta}>
         <View style={styles.fila}>
           <Text style={styles.codigo}>{reporte.codigo}</Text>
+
           <Text style={styles.adhesiones}>
             ♥ {reporte.adhesiones}
           </Text>
         </View>
 
-        <Text style={styles.direccion}>{reporte.direccion}</Text>
-
+        <Text style={styles.direccion}>
+          {reporte.direccion}
+        </Text>
         <Text style={styles.descripcion}>
           {reporte.descripcion || 'Sin descripción'}
         </Text>
-
         <View style={styles.filaInferior}>
           <Text style={styles.estado}>
-            {reporte.estado.replace('_', ' ')}
+            {obtenerEtiquetaEstado(reporte.estado)}
           </Text>
-          <Text style={styles.zona}>{reporte.zonaId}</Text>
+          <Text style={styles.zona}>
+            {reporte.zonaId}
+          </Text>
         </View>
       </View>
     </Pressable>
