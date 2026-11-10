@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   FlatList,
   Pressable,
@@ -6,7 +6,7 @@ import {
   StyleSheet,
   Text,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useAuth } from '@/hooks/auth/useAuth';
 import { obtenerBandeja } from '@/services/bandeja';
 import type { EstadoReporte, Reporte } from '@/types';
@@ -24,6 +24,7 @@ const FILTROS: {
   { etiqueta: 'Recibidos', valor: ['recibido'] },
   { etiqueta: 'En revisión', valor: ['en_revision'] },
   { etiqueta: 'Asignados', valor: ['asignado'] },
+  { etiqueta: 'Finalizados', valor: ['resuelto', 'rechazado'] },
 ];
 
 export default function BandejaOperador() {
@@ -46,18 +47,22 @@ export default function BandejaOperador() {
         setError('Necesitás iniciar sesión para ver la bandeja.');
         return;
       }
+
       try {
         if (refrescar) {
           setActualizando(true);
         } else {
           setCargando(true);
         }
+
         setError(null);
+
         const respuesta = await obtenerBandeja(token, {
           pagina: 1,
           porPagina: 20,
           estado: FILTROS[filtro].valor,
         });
+
         setReportes(respuesta.datos);
       } catch {
         setError('No se pudieron cargar los reportes. Intentá nuevamente.');
@@ -69,11 +74,13 @@ export default function BandejaOperador() {
     [token, filtro],
   );
 
-  useEffect(() => {
-    if (!cargandoSesion) {
-      void cargarReportes();
-    }
-  }, [cargandoSesion, cargarReportes]);
+  useFocusEffect(
+    useCallback(() => {
+      if (!cargandoSesion) {
+        void cargarReportes();
+      }
+    }, [cargandoSesion, cargarReportes]),
+  );
 
   function handleAbrirPerfil() {
     router.push('/(operador)/perfil');
@@ -105,6 +112,7 @@ export default function BandejaOperador() {
             nombre={usuario?.nombre ?? 'operador'}
             onPressPerfil={handleAbrirPerfil}
           />
+
           <Pressable
             accessibilityRole="button"
             onPress={handleEscanear}
@@ -113,8 +121,11 @@ export default function BandejaOperador() {
               pressed && styles.botonEscanearApretado,
             ]}
           >
-            <Text style={styles.textoEscanear}>Escanear QR del vecino</Text>
+            <Text style={styles.textoEscanear}>
+              Escanear QR del vecino
+            </Text>
           </Pressable>
+
           <FiltrosReportes
             filtros={FILTROS}
             seleccionado={filtro}
@@ -160,8 +171,14 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: '#0284C7',
   },
-  botonEscanearApretado: { opacity: 0.8 },
-  textoEscanear: { color: '#FFFFFF', fontSize: 18, fontWeight: '700' },
+  botonEscanearApretado: {
+    opacity: 0.8,
+  },
+  textoEscanear: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '700',
+  },
   contenedor: {
     flex: 1,
     backgroundColor: '#F8FAFC',
