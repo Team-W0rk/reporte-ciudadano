@@ -198,16 +198,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [sesion]);
 
   const cerrarSesion = useCallback(async () => {
-    // Primero se da de baja el teléfono en la API, mientras el token de sesión
-    // todavía sirve. Si falla (sin red, API sin implementar) se cierra igual.
     try {
       const tokenExpo = await leerTokenPush();
+
       if (tokenExpo && sesion?.token) {
         await darDeBajaDispositivo(sesion.token, tokenExpo);
       }
+    } catch (error) {
+      console.warn('No se pudo dar de baja el dispositivo:', error);
+    } finally {
       await borrarTokenPush();
-    } catch {
-      // No bloquea el cierre de sesión.
     }
 
     try {
