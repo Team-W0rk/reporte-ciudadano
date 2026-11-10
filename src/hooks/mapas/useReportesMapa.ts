@@ -1,6 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
 import type { Region } from 'react-native-maps';
-
 import { obtenerMensajeError } from '@/services/errores';
 import { listarReportesParaMapa } from '@/services/reportesCreacion';
 import type { Reporte } from '@/types';
@@ -10,6 +9,7 @@ interface EstadoReportesMapa {
   cargando: boolean;
   error: string | null;
   cargarRegion: (region: Region) => Promise<void>;
+  actualizarAdhesiones: (reporteId: string) => void;
 }
 
 export function useReportesMapa(): EstadoReportesMapa {
@@ -19,9 +19,18 @@ export function useReportesMapa(): EstadoReportesMapa {
 
   const ultimoPedido = useRef(0);
 
+  const actualizarAdhesiones = useCallback((reporteId: string) => {
+      setReportes((actuales) =>
+        actuales.map((reporte) =>
+          reporte.id === reporteId
+            ? { ...reporte, adhesiones: reporte.adhesiones + 1 }
+            : reporte,
+        ),
+      );
+  }, []);
+
   const cargarRegion = useCallback(async (region: Region) => {
     const pedido = ++ultimoPedido.current;
-
     setCargando(true);
     setError(null);
 
@@ -49,5 +58,5 @@ export function useReportesMapa(): EstadoReportesMapa {
     }
   }, []);
 
-  return { reportes, cargando, error, cargarRegion };
+  return { reportes, cargando, error, cargarRegion, actualizarAdhesiones };
 }

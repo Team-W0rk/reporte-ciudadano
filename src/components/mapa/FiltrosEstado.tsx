@@ -1,9 +1,5 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-
-import {
-  ColorEstado,
-  ColorPrimario,
-} from '@/constants/dominio';
+import { ColorEstado, ColorPrimario } from '@/constants/dominio';
 import type { EstadoReporte } from '@/types';
 
 export type FiltroReporte = EstadoReporte | 'todos';

@@ -1,6 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { ColorEstado, EtiquetaEstado } from '@/constants/dominio';
 import type { Reporte } from '@/types';
 
@@ -8,12 +7,20 @@ interface Props {
   reporte: Reporte;
   onVerDetalle: () => void;
   onCerrar: () => void;
+  onSumarme: () => void;
+  yaAdherido: boolean;
+  esPropio: boolean;
+  sumando: boolean;
 }
 
 export function TarjetaReporteSeleccionado({
   reporte,
   onVerDetalle,
   onCerrar,
+  onSumarme,
+  yaAdherido,
+  esPropio,
+  sumando,
 }: Props) {
   const colorEstado = ColorEstado[reporte.estado];
 
@@ -32,13 +39,11 @@ export function TarjetaReporteSeleccionado({
             color={colorEstado}
           />
         </View>
-
         <View style={styles.detalle}>
           <Text style={styles.etiqueta}>REPORTE CIUDADANO</Text>
           <Text style={styles.direccion} numberOfLines={2}>
             {reporte.direccion}
           </Text>
-
           <View style={styles.filaEstado}>
             <View
               style={[styles.punto, { backgroundColor: colorEstado }]}
@@ -48,7 +53,6 @@ export function TarjetaReporteSeleccionado({
             </Text>
           </View>
         </View>
-
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Cerrar detalle"
@@ -58,29 +62,57 @@ export function TarjetaReporteSeleccionado({
         >
           <Ionicons name="close" size={21} color="#64748B" />
         </Pressable>
-      </View>
-
-      <View style={styles.separador} />
-
-      <View style={styles.pie}>
-        <View style={styles.adhesiones}>
-          <Ionicons name="people-outline" size={18} color="#1B6CA8" />
-          <Text style={styles.textoAdhesiones}>
-            {reporte.adhesiones}{' '}
-            {reporte.adhesiones === 1 ? 'adhesión' : 'adhesiones'}
-          </Text>
-        </View>
-
-        <Pressable
-          accessibilityRole="button"
-          onPress={onVerDetalle}
-          style={styles.boton}
-        >
-          <Text style={styles.textoBoton}>Ver detalle</Text>
-          <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
-        </Pressable>
-      </View>
     </View>
+    <View style={styles.separador} />
+    <View style={styles.pie}>
+      <View style={styles.adhesiones}>
+        <Ionicons name="people-outline" size={18} color="#1B6CA8" />
+        <Text style={styles.textoAdhesiones}>
+          {reporte.adhesiones}{' '}
+          {reporte.adhesiones === 1 ? 'adhesión' : 'adhesiones'}
+        </Text>
+      </View>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{
+          disabled: yaAdherido || esPropio || sumando,
+        }}
+        disabled={yaAdherido || esPropio || sumando}
+        onPress={onSumarme}
+        style={[
+          styles.botonSumarme,
+          (yaAdherido || esPropio) && styles.botonDeshabilitado,
+        ]}
+      >
+        {sumando ? (
+          <ActivityIndicator size="small" color="#FFFFFF" />
+        ) : (
+          <>
+            <Ionicons
+              name={yaAdherido ? 'checkmark-circle' : 'people-outline'}
+              size={16}
+              color="#FFFFFF"
+            />
+            <Text style={styles.textoBoton}>
+              {esPropio
+                ? 'Es tu reporte'
+                : yaAdherido
+                  ? 'Ya estás sumado'
+                  : 'Sumarme'}
+            </Text>
+          </>
+        )}
+      </Pressable>
+      <Pressable
+        accessibilityRole="button"
+        onPress={onVerDetalle}
+        style={styles.boton}
+      >
+        <Text style={styles.textoBoton}>Ver detalle</Text>
+        <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
+      </Pressable>
+    </View>
+  </View>
   );
 }
 
@@ -181,5 +213,18 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '700',
+  },
+  botonSumarme: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    backgroundColor: '#0E8A63',
+    paddingHorizontal: 11,
+    paddingVertical: 11,
+    borderRadius: 12,
+  },
+  botonDeshabilitado: {
+    backgroundColor: '#94A3B8',
   },
 });

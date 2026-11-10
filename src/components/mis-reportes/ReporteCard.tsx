@@ -1,15 +1,9 @@
-
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-
 import { ColorPrimario } from '@/constants/dominio';
 import type { Reporte } from '@/types';
-
 import EstadoReporteBadge from './EstadoReporteBadge';
-import {
-  formatearFechaReporte,
-  obtenerTituloReporte,
-} from '@/utils/formatoReporte';
+import { formatearFechaReporte, obtenerTituloReporte } from '@/utils/formatoReporte';
 
 interface Props {
   reporte: Reporte;
@@ -38,31 +32,26 @@ export default function ReporteCard({ reporte, onPress }: Props) {
           color={ColorPrimario}
         />
       </View>
-
       <View style={styles.contenido}>
         <View style={styles.filaSuperior}>
           <Text style={styles.codigo}>{reporte.codigo}</Text>
           <EstadoReporteBadge estado={reporte.estado} />
         </View>
-
         <Text style={styles.titulo} numberOfLines={2}>
           {obtenerTituloReporte(reporte)}
         </Text>
-
         <View style={styles.dato}>
           <Ionicons name="location-outline" size={15} color="#6B7280" />
           <Text style={styles.secundario} numberOfLines={2}>
             {reporte.direccion || 'Ubicación no disponible'}
           </Text>
         </View>
-
         <View style={styles.dato}>
           <Ionicons name="calendar-outline" size={15} color="#6B7280" />
           <Text style={styles.secundario}>
             {formatearFechaReporte(reporte.creadoEn)}
           </Text>
         </View>
-
         {tieneFoto && (
           <View style={styles.dato}>
             <Ionicons name="image-outline" size={15} color="#6B7280" />
@@ -70,7 +59,6 @@ export default function ReporteCard({ reporte, onPress }: Props) {
           </View>
         )}
       </View>
-
       <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
     </Pressable>
   );
