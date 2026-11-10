@@ -1,4 +1,3 @@
-
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 interface EstadoBandejaProps {
@@ -19,7 +18,6 @@ export function EstadoBandeja({
       </View>
     );
   }
-
   return (
     <View style={styles.vacio}>
       <Text style={styles.error}>{error}</Text>
