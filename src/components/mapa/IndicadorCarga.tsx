@@ -1,5 +1,4 @@
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-
 import { ColorPrimario } from '@/constants/dominio';
 
 export function IndicadorCarga() {
