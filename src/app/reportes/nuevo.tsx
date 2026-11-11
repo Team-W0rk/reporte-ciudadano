@@ -38,6 +38,7 @@ export default function NuevoReporteScreen() {
   const enviarReporte = () => {
     void reporte.enviar({
       fotoUri: foto.fotoUri,
+      fotoExtraUri: foto.fotoExtraUri,
       audioUri: audio.audioUri,
       direccion: ubicacion.direccion,
     });
@@ -133,7 +134,10 @@ export default function NuevoReporteScreen() {
           <View style={styles.tarjeta}>
             <AdjuntoFoto
               fotoUri={foto.fotoUri}
+              fotoExtraUri={foto.fotoExtraUri}
               onSacarFoto={() => void foto.sacarFoto()}
+              onSacarFotoExtra={() => void foto.sacarFotoExtra()}
+              onQuitarFotoExtra={foto.quitarFotoExtra}
             />
           </View>
           <View style={styles.tarjeta}>

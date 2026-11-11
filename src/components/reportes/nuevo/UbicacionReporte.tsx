@@ -1,4 +1,4 @@
-import type { Region } from 'react-native-maps';
+import type { RegionMapa } from '@/types/mapa';
 import {
   ActivityIndicator,
   Linking,
@@ -8,13 +8,8 @@ import {
   TextInput,
   View,
 } from 'react-native';
-
-import {
-  ColorBorde,
-  ColorPrimario,
-} from '@/constants/dominio';
+import { ColorBorde, ColorPrimario } from '@/constants/dominio';
 import type { Coordenadas } from '@/types';
-
 import SelectorPuntoMapa from './SelectorPuntoMapa';
 
 interface UbicacionReporteProps {
@@ -22,7 +17,7 @@ interface UbicacionReporteProps {
   direccion: string;
   ubicacionDenegada: boolean;
   cargandoUbicacion: boolean;
-  regionInicial: Region | null;
+  regionInicial: RegionMapa | null;
   /** Sin GPS: el vecino marca el punto en el mapa. */
   modoManual: boolean;
   onCambiarDireccion: (direccion: string) => void;

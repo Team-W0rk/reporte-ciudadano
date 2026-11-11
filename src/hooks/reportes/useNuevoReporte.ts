@@ -18,9 +18,11 @@ import {
 } from '@/services/reportesCreacion';
 import { useAuth } from '@/hooks/auth/useAuth';
 import type { Coordenadas, Reporte, TipoDeReporte } from '@/types';
+import { adherirseAReporte } from '@/services/adhesiones';
 
 interface DatosFormulario {
   fotoUri: string | null;
+  fotoExtraUri: string | null;
   audioUri: string | null;
   direccion: string;
 }
@@ -127,11 +129,7 @@ export default function useNuevoReporte(
     }
 
     try {
-      // Primero registramos la adhesión en la API.
-      await sumarseAReporte(reporte.id, token);
-
-      // Si la API responde correctamente, guardamos la adhesión local.
-      await guardarAdhesionLocal(usuario.id, reporte.id);
+      await adherirseAReporte(reporte.id, usuario.id, token);
 
       await Haptics.notificationAsync(
         Haptics.NotificationFeedbackType.Success,
@@ -156,6 +154,7 @@ export default function useNuevoReporte(
    */
   const enviar = async ({
     fotoUri,
+    fotoExtraUri,
     audioUri,
     direccion,
   }: DatosFormulario) => {
@@ -210,6 +209,7 @@ export default function useNuevoReporte(
       descripcion: descripcion.trim() || null,
       audioUrl: audioUri,
       fotoUri,
+      fotoExtraUri,
       coordenadas,
       direccion: direccion.trim(),
     };
@@ -221,7 +221,12 @@ export default function useNuevoReporte(
         await encolarReporte({
           ...datos,
           fotoUri: await copiarAPersistente(datos.fotoUri),
-          audioUrl: datos.audioUrl ? await copiarAPersistente(datos.audioUrl) : null,
+          fotoExtraUri: datos.fotoExtraUri
+            ? await copiarAPersistente(datos.fotoExtraUri)
+            : null,
+          audioUrl: datos.audioUrl
+            ? await copiarAPersistente(datos.audioUrl)
+            : null,
         });
 
         await Haptics.notificationAsync(
@@ -230,7 +235,7 @@ export default function useNuevoReporte(
 
         Alert.alert(
           'Reporte guardado',
-          'No hay señal ahora. Lo guardamos en tu teléfono y se envía solo apenas vuelva la conexión.',
+          'No hay conexión en este momento. Guardamos tu reporte en el teléfono y lo enviaremos automáticamente cuando vuelva internet.\n\nTe mostraremos tu código de seguimiento cuando se complete el envío.',
         );
 
         router.back();
@@ -257,15 +262,16 @@ export default function useNuevoReporte(
         return;
       }
 
-      await crearReporte(datos, token);
+      const respuesta = await crearReporte(datos, token);
+      const codigoSeguimiento = respuesta.datos.codigo;
 
       await Haptics.notificationAsync(
         Haptics.NotificationFeedbackType.Success,
       );
 
       Alert.alert(
-        'Reporte enviado',
-        'Gracias. Te vamos a avisar cuando cambie de estado.',
+        '¡Reporte enviado!',
+        `Tu reporte fue registrado correctamente.\n\nCódigo de seguimiento: ${codigoSeguimiento}\n\nGuardá este código para consultar el estado de tu reporte.`,
       );
 
       router.back();

@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import * as Location from 'expo-location';
-import type { Region } from 'react-native-maps';
+import type { RegionMapa } from '@/types/mapa';
 import type { Coordenadas } from '@/types';
 
 // Centro de Gualeguaychú: donde arranca el mapa si no hay GPS.
-const CENTRO_CIUDAD: Region = {
+const CENTRO_CIUDAD: RegionMapa = {
   latitude: -33.0089,
   longitude: -58.5142,
   latitudeDelta: 0.03,
@@ -16,7 +16,7 @@ export default function useUbicacionReporte() {
   const [direccion, setDireccionEstado] = useState('');
   const [ubicacionDenegada, setUbicacionDenegada] = useState(false);
   const [cargandoUbicacion, setCargandoUbicacion] = useState(true);
-  const [regionInicial, setRegionInicial] = useState<Region | null>(null);
+  const [regionInicial, setRegionInicial] = useState<RegionMapa | null>(null);
   // Sin GPS (permiso denegado o GPS apagado) el vecino marca el punto a mano.
   const [modoManual, setModoManual] = useState(false);
 

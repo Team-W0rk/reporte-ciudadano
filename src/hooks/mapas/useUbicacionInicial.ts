@@ -1,8 +1,8 @@
 import * as Location from 'expo-location';
 import { useEffect, useState } from 'react';
-import type { Region } from 'react-native-maps';
+import type { RegionMapa } from '@/types/mapa';
 
-const CENTRO_CIUDAD: Region = {
+const CENTRO_CIUDAD: RegionMapa = {
   latitude: -33.0089,
   longitude: -58.5142,
   latitudeDelta: 0.04,
@@ -10,12 +10,12 @@ const CENTRO_CIUDAD: Region = {
 };
 
 interface EstadoUbicacion {
-  regionInicial: Region | null;
+  regionInicial: RegionMapa | null;
   permisoDenegado: boolean;
 }
 
 export function useUbicacionInicial(): EstadoUbicacion {
-  const [regionInicial, setRegionInicial] = useState<Region | null>(null);
+  const [regionInicial, setRegionInicial] = useState<RegionMapa | null>(null);
   const [permisoDenegado, setPermisoDenegado] = useState(false);
 
   useEffect(() => {

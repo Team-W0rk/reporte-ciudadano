@@ -1,4 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState, useEffect } from 'react';
 import {
@@ -9,7 +8,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import MapView from 'react-native-maps';
+import { MapaOpenStreetMap } from '@/components/mapa/MapaOpenStreetMap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AvisoMapa } from '@/components/mapa/AvisoMapa';
 import { BotonNuevoReporte } from '@/components/mapa/BotonNuevoReporte';
@@ -17,7 +16,6 @@ import { ContadorReportes } from '@/components/mapa/ContadorReportes';
 import { EncabezadoMapa } from '@/components/mapa/EncabezadoMapa';
 import { FiltrosEstado, type FiltroReporte } from '@/components/mapa/FiltrosEstado';
 import { IndicadorCarga } from '@/components/mapa/IndicadorCarga';
-import { MarcadoresReportes } from '@/components/mapa/MarcadoresReportes';
 import { TarjetaReporteSeleccionado } from '@/components/mapa/TarjetaReporteSeleccionado';
 import { ColorPrimario } from '@/constants/dominio';
 import { useReportesMapa } from '@/hooks/mapas/useReportesMapa';
@@ -77,20 +75,12 @@ export default function MapaScreen() {
 
   return (
     <View style={styles.pantalla}>
-      <MapView
-        style={StyleSheet.absoluteFill}
-        initialRegion={regionInicial}
-        showsUserLocation={!permisoDenegado}
-        showsMyLocationButton={!permisoDenegado}
-        onMapReady={() => void cargarRegion(regionInicial)}
-        onRegionChangeComplete={(region) => void cargarRegion(region)}
-        onPress={() => setReporteSeleccionado(null)}
-      >
-        <MarcadoresReportes
-          reportes={reportesFiltrados}
-          onSeleccionar={setReporteSeleccionado}
-        />
-      </MapView>
+      <MapaOpenStreetMap
+        regionInicial={regionInicial}
+        reportes={reportesFiltrados}
+        onSeleccionar={setReporteSeleccionado}
+        onRegionChange={(region) => void cargarRegion(region)}
+      />
       <View style={[ styles.panelSuperior, { top: insets.top }, ]}>
         <EncabezadoMapa />
         <FiltrosEstado
