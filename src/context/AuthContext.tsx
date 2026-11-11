@@ -20,7 +20,7 @@ import {
   recuperarSesion,
   recuperarSesionBiometrica,
   quitarProteccionBiometrica,
-} from '@/services/sesion';
+} from '@/services/sesions';
 import { biometriaActivada, guardarPreferenciaBiometrica } from '@/services/biometria';
 import { obtenerMensajeError } from '@/services/errores';
 import { darDeBajaDispositivo } from '@/services/dispositivos';
