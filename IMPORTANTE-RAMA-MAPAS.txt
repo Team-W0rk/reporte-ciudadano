@@ -1,0 +1,21 @@
+IMPORTANTE - ORGANIZACIÓN DE RAMAS
+
+Este repositorio contiene dos implementaciones de mapas para el proyecto Reporte Ciudadano.
+
+1. RAMA `main`
+   - Mantiene la implementación original utilizando `react-native-maps`.
+   - Corresponde a la versión desarrollada siguiendo los requerimientos de la cátedra.
+   - Es la rama de referencia para la entrega académica.
+
+2. RAMA `Leaflet-OpenStreetMap`
+   - Contiene una implementación alternativa utilizando Leaflet + OpenStreetMap mediante `react-native-webview`.
+   - Se desarrolló para evitar la dependencia de Google Maps API Key.
+   - Permite visualizar mapas y marcadores utilizando OpenStreetMap.
+
+IMPORTANTE:
+Ambas ramas contienen implementaciones alternativas del mapa. No se deben mezclar sus cambios sin revisar las diferencias y dependencias correspondientes.
+
+Para consultar cada implementación:
+
+- Versión solicitada por la cátedra: `main`
+- Versión alternativa: `Leaflet-OpenStreetMap`
