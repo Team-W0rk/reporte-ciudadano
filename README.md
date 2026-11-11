@@ -1,169 +1,236 @@
 # Reporte Ciudadano
 
-App móvil para que los vecinos de Gualeguaychú reporten problemas urbanos (baches, luminarias, basura, etc.) con foto y ubicación, y le hagan seguimiento hasta que se resuelvan.
+Aplicación móvil desarrollada como proyecto final de la materia **Desarrollo para Móviles** de la Universidad Nacional de Entre Ríos (UNER).
+Permite que los vecinos de la ciudad de **Gualeguaychú** registren y consulten problemas urbanos, como baches, luminarias dañadas, acumulación de basura y otras incidencias en la vía pública.
 
-Trabajo Integrador — Desarrollo para Móviles, UNER. Construida con **React Native + Expo + Expo Router**.
+## 1. Tecnologías utilizadas
+- **React Native**
+- **Expo**
+- **Expo Router** para la navegación.
+- **TypeScript**
+- **Axios** para las solicitudes HTTP.
+- **React Native Maps** para la visualización del mapa.
+- **Expo Location** para obtener la ubicación.
+- **Expo Image Picker / Camera** para adjuntar fotografías.
+- **Expo Notifications** para las notificaciones.
+- **EAS Build** para generar la aplicación Android.
 
----
+## 2. Requisitos previos
+Para ejecutar el proyecto se necesita:
+- Node.js.
+- npm.
+- Expo CLI.
+- Android Studio o un dispositivo Android para probar la aplicación.
+- Acceso a la API del proyecto.
 
-## 1. Antes de arrancar
-
-- Node.js instalado (probado con Node 24 / npm 12).
-- La app de **Expo Go** en tu celular (Play Store / App Store), o un emulador Android configurado.
-- Todos conectados al mismo WiFi que la compu si usan Expo Go.
-
-## 2. Puesta en marcha
+## 3. Instalación y ejecución
+Clonar el repositorio:
 
 ```bash
-git clone <url-del-repo>
+git clone <URL_DEL_REPOSITORIO>
+```
+
+Ingresar a la carpeta:
+
+```bash
 cd reporte-ciudadano
+```
+
+Instalar las dependencias:
+
+```bash
 npm install
+```
+
+Crear el archivo `.env` a partir del ejemplo:
+
+```bash
 cp .env.example .env
+```
+
+Configurar las variables de entorno correspondientes.
+
+Ejecutar el proyecto:
+
+```bash
 npx expo start
 ```
 
-Con el servidor corriendo:
-- `a` → abrir en emulador Android
-- `w` → abrir en el navegador (cámara, mapa y sensores no andan bien en web; sirve solo para ver la UI general)
-- Escanear el QR con **Expo Go** desde el celular
-
-> ⚠️ **Windows:** si `npx create-expo-app` o `npx expo install` tiran `Could not parse JSON returned from "npm.cmd pack ..."`, es un bug de npm 12.x en Windows (devuelve el JSON duplicado), no un problema del proyecto. Para instalar paquetes nuevos usar `npm install <paquete>` en vez de `npx expo install <paquete>`, fijando la versión `~57.x` si hace falta.
-
-## 3. Scripts disponibles
-
-| Comando | Qué hace |
-|---|---|
-| `npm start` | Levanta el servidor de desarrollo de Expo |
-| `npm run android` | Levanta directo en emulador/dispositivo Android |
-| `npm run lint` | Corre ESLint sobre todo el proyecto |
-| `npm run lint:fix` | Corre ESLint y corrige automáticamente lo que se pueda |
-| `npm run format` | Formatea todo el código con Prettier |
-| `npm run typecheck` | Corre el compilador de TypeScript sin generar archivos |
-
-**Corré `npm run lint` y `npm run typecheck` antes de cada Pull Request.** Con las extensiones recomendadas de VS Code instaladas (se sugieren solas al abrir el proyecto), el formato se aplica automático al guardar.
-
----
-
-## 4. Arquitectura del proyecto (leer antes de programar)
-
-```
-src/
-  app/                 # Pantallas, con Expo Router (cada archivo = una ruta)
-    (auth)/            # login, registro — sin sesión           [Dev 1]
-    (tabs)/            # mapa, mis-reportes, perfil             [Dev 2 / Dev 3]
-    reportes/          # nuevo.tsx, [id].tsx (detalle)          [Dev 2 / Dev 3]
-    operador/          # bandeja municipal, rol operador        [Dev 3]
-  types/               # Interfaces de TypeScript (entidades oficiales del PRD)
-  mocks/               # Datos falsos, tipados contra src/types
-  services/           # ÚNICA puerta de entrada a los datos
-  almacenamiento/      # wrappers de expo-secure-store / expo-sqlite (a completar)
-  constants/
-    theme.ts           # viene de la plantilla de Expo (Colors, Spacing, Fonts)
-    dominio.ts         # NUESTRO: colores/etiquetas por estado, radios, tamaños
-  components/          # Componentes compartidos (de la plantilla)
-```
-
-### La regla más importante del proyecto
-
-**Ninguna pantalla importa un mock directamente.** Todo pasa por `src/services/reportes.ts`. Hoy esas funciones devuelven datos de `src/mocks/`; el día que la cátedra publique la API real, ese es el único archivo que cambia (se reemplazan los `Promise.resolve(...)` por `fetch(...)`).
-**Ninguna pantalla importa un mock directamente.** Todo pasa por `src/services/reportes.ts`. Hoy esas funciones devuelven datos de `src/mocks/`; el día que la cátedra publique la API real, ese es el único archivo que cambia (se reemplazan los `Promise.resolve(...)` por `fetch(...)`).
-
-```tsx
-// ❌ mal
-import { reportesMock } from '@/mocks/reportes.mock';
-
-// ✅ bien
-import { listarReportes } from '@/services/reportes';
-```
-
-Los services son **asíncronos desde el día 1**, aunque hoy respondan al instante — así las pantallas ya manejan bien carga/vacío/error.
-
-### types y estados oficiales
-
-Los 5 estados de un reporte son los que define el PRD de la cátedra, no los inventamos nosotros: `recibido`, `en_revision`, `asignado`, `resuelto`, `rechazado`. Están en `src/types/index.ts`, y sus colores/etiquetas en `src/constants/dominio.ts` (`ColorEstado`, `EtiquetaEstado`) — usar siempre esas constantes, no hardcodear colores nuevos.
-
-### `theme.ts` vs `dominio.ts` — para qué es cada uno
-
-- **`theme.ts`** (de la plantilla): paleta genérica claro/oscuro (`Colors.light`/`Colors.dark`), espaciados (`Spacing`) y fuentes (`Fonts`). Es la base visual de cualquier app Expo.
-- **`dominio.ts`** (nuestro): todo lo específico de "Reporte Ciudadano" — el color de cada estado del reporte, sus etiquetas en español, y algunos radios/tamaños de fuente reutilizables. Cuando necesites un color para un chip de estado o un ícono, sacalo de acá, no inventes uno nuevo.
-
----
-
-## 5. Estilo de código
-
-- **Español para nombres de variables, funciones y archivos del dominio** (`crearReporte`, `src/types/index.ts`); inglés solo para términos técnicos estándar (`Props`, `useState`).
-- Formato automático con Prettier (`.prettierrc`): comillas simples, punto y coma, ancho de línea 100.
-- ESLint usa `eslint-config-expo`, la config oficial del equipo de Expo.
-- Los `TODO (Dev X - ...)` en cada pantalla marcan quién sigue esa parte y qué falta — actualizalos o borralos a medida que avanzás.
-
-## 6. Convención de Git
-
-- Rama principal: `main`, protegida — no se pushea directo.
-- Una rama por feature: `feature/nombre-corto` (ej: `feature/camara-nuevo-reporte`).
-- PR chico, con descripción de qué pantalla/función toca, revisado por al menos otro del equipo.
-- Correr `npm run lint` y `npm run typecheck` antes de abrir el PR.
-
----
-
-## 7. División de tareas entre los 3 desarrolladores
-
-### 🔐 Dev 1 — Auth, sesión y persistencia base
-- `src/app/(auth)/` (login, registro) y `src/app/(tabs)/perfil.tsx`.
-- Servicio de auth mockeado (`src/services/auth.ts`, a crear siguiendo el patrón de `services/reportes.ts`).
-- `expo-secure-store` para el token + `expo-local-authentication` para reingreso con huella/rostro (con alternativa si el dispositivo no tiene).
-- `expo-sqlite/kv-store` para preferencias (ej: el switch de avisos).
-- `expo-network` para el estado de la conexión (lo va a necesitar también Dev 2).
-
-### 🗺️ Dev 2 — Mapa, cámara y creación de reportes
-- `src/app/(tabs)/mapa.tsx` — reemplazar la lista provisoria por `react-native-maps`, markers coloreados por `ColorEstado`.
-- `expo-location` (con manejo de permiso denegado) + detección de duplicados a 50m (`services/reportes.ts` → `buscarReportesCercanos`, ya armada).
-- `src/app/reportes/nuevo.tsx` — cámara (`expo-camera`/`expo-image-picker`), nota de voz (`expo-audio`), envío con `crearReporte()`.
-- Cola offline con `expo-sqlite` cuando no hay red.
-- Vibración (`expo-haptics`) al confirmar envío o detectar duplicado.
-
-### 📋 Dev 3 — Seguimiento, bandeja del operador y notificaciones
-- `src/app/(tabs)/mis-reportes.tsx` y `src/app/reportes/[id].tsx` (historial).
-- `src/app/operador/` completo: filtros, cambio de estado con comentario obligatorio, asignación a cuadrilla.
-- `expo-notifications`, disparadas por cambios reales de estado (no un botón de prueba).
-- Mantenimiento de `src/mocks/` y `src/services/reportes.ts` cuando haga falta una función nueva (ej: cambiar estado) — avisar en el grupo antes de cambiar la forma de una función existente, porque la usan los otros dos.
-
-### Puntos de integración
-1. **Semana 1:** los 3 revisan `src/types/index.ts` y los mocks (ya están armados, si falta algo se agrega ahí).
-2. Antes de tocar `services/reportes.ts`, avisar en el grupo.
-3. **Primer build de EAS una semana antes de la entrega** (`eas build --platform android --profile preview`) — la cátedra avisa que el primer intento casi siempre falla por algo chico.
-
----
-
-## 8. Build de producción (EAS)
-
-Ya está `eas.json` en la raíz, con el perfil `preview` configurado para generar un **APK instalable** (no un `.aab`, que no sirve para instalar directo en un celular).
+Para abrir la aplicación en Android:
 
 ```bash
-npm install -g eas-cli
-eas login
-eas build:configure   # solo la primera vez, vincula el proyecto a una cuenta de expo.dev
+npx expo start --android
+```
+
+## 4. Arquitectura del proyecto
+```text
+reporte-ciudadano/
+├── assets/              # Imágenes, íconos y recursos gráficos
+├── scripts/             # Scripts auxiliares
+├── src/
+│   ├── almacenamiento/  # Persistencia y almacenamiento local
+│   ├── app/             # Pantallas y navegación (Expo Router)
+│   ├── components/      # Componentes reutilizables
+│   ├── constants/       # Constantes y configuración
+│   ├── context/         # Contextos globales
+│   ├── hooks/           # Hooks personalizados
+│   ├── services/        # Comunicación con la API
+│   ├── types/           # Tipos e interfaces TypeScript
+│   └── utils/           # Funciones auxiliares
+├── _vscode/             # Configuración del editor
+├── .env.example         # Ejemplo de variables de entorno
+├── app.json             # Configuración de Expo
+├── eas.json             # Configuración de builds EAS
+├── expo-env.d.ts        # Tipos de entorno de Expo
+├── package.json         # Dependencias y scripts
+├── tsconfig.json        # Configuración de TypeScript
+└── use-color-scheme.ts  # Configuración del tema
+```
+
+## 5. Funcionalidades principales
+### Para vecinos
+- Visualización de reportes en el mapa de la ciudad.
+- Registro de nuevos reportes urbanos.
+- Selección del tipo de problema.
+- Captura o selección de fotografías.
+- Obtención de ubicación mediante GPS.
+- Registro de dirección y descripción.
+- Grabación de notas de audio.
+- Consulta del estado de los reportes.
+- Posibilidad de sumarse a reportes existentes.
+- Gestión de reportes sin conexión mediante almacenamiento local y sincronización posterior.
+
+### Para operadores municipales
+- Visualización de reportes recibidos.
+- Consulta de información y fotografías.
+- Seguimiento de los estados de los reportes.
+- Gestión de incidencias desde la bandeja de operadores.
+
+## 6. Estados de los reportes
+Los reportes pueden atravesar los siguientes estados:
+
+| Estado | Descripción |
+|---|---|
+| Recibido | El reporte fue registrado. |
+| En revisión | El municipio está evaluando el problema. |
+| Asignado | El reporte fue asignado para su resolución. |
+| Resuelto | El problema fue solucionado. |
+| Rechazado | El reporte fue rechazado. |
+
+## 7. Conexión con la API
+La aplicación consume la API proporcionada para el proyecto.
+La URL base se configura mediante la variable de entorno:
+
+```env
+EXPO_PUBLIC_API_URL=https://api-reporte-ciudadano-yvth.onrender.com
+```
+
+La aplicación utiliza Axios para centralizar las solicitudes HTTP.
+La API se encuentra publicada en Render y utiliza una base de datos PostgreSQL alojada en Supabase, junto con almacenamiento de archivos externo.
+
+**Importante:** el servicio gratuito de Render puede entrar en suspensión después de un período de inactividad. Por eso, la primera solicitud puede demorar mientras el servidor vuelve a iniciarse.
+
+## 8. Configuración de mapas y problema en la APK
+Durante el desarrollo se utilizó `react-native-maps` para mostrar el mapa de Gualeguaychú y la ubicación de los reportes.
+
+### Funcionamiento en desarrollo
+En el entorno de desarrollo, utilizando Expo Go, el mapa funciona correctamente.
+
+### Problema en la versión APK
+Al generar una APK independiente mediante EAS Build, la aplicación se cierra al ingresar a la pantalla del mapa.
+El error registrado en Android es:
+
+```text
+java.lang.IllegalStateException:
+API key not found.
+
+Check that <meta-data
+android:name="com.google.android.geo.API_KEY"
+android:value="your API key"/>
+is in the <application> element
+of AndroidManifest.xml
+```
+
+### Causa
+
+La versión Android de `react-native-maps` utiliza Google Maps y necesita una API Key configurada en el manifiesto de Android.
+Expo Go dispone de su propia configuración para los mapas, por eso funciona durante el desarrollo. Sin embargo, esa configuración no se incorpora automáticamente a una APK independiente.
+Para configurar Google Maps en una aplicación propia se necesita generar una API Key desde Google Cloud y habilitar los servicios correspondientes. La configuración también requiere asociar una cuenta de facturación.
+
+**Esta configuración no se realizó porque el equipo no desea asociar una tarjeta bancaria.**
+
+### Alternativa pendiente
+Se plantea evaluar **OpenStreetMap** como alternativa para mostrar los mapas sin depender de una API Key de Google Maps.
+Esta migración queda pendiente de implementación y pruebas en una nueva APK.
+
+## 9. Generación de APK
+El proyecto utiliza EAS Build para generar una versión instalable de Android.
+El perfil `preview` de `eas.json` está configurado para generar una APK:
+
+```json
+{
+  "build": {
+    "preview": {
+      "environment": "preview",
+      "android": {
+        "buildType": "apk"
+      }
+    }
+  }
+}
+```
+
+La variable `EXPO_PUBLIC_API_URL` debe estar configurada en el entorno `preview` de EAS.
+
+Para generar la APK:
+
+```bash
 eas build --platform android --profile preview
 ```
 
-Cualquiera del equipo con acceso al proyecto en expo.dev puede correr el build, no hace falta que sea siempre la misma persona.
+Una vez finalizado el proceso, EAS proporciona un enlace para descargar el archivo APK.
+
+**Aclaración:** generar correctamente la APK no garantiza que todas las funcionalidades estén operativas. La pantalla del mapa tiene el inconveniente de configuración explicado en la sección anterior.
+
+## 10. Variables de entorno
+El proyecto utiliza variables de entorno para configurar la conexión con la API.
+
+Archivo `.env.example`:
+
+```env
+EXPO_PUBLIC_API_URL=http://localhost:3000
+```
+
+Para desarrollo local se debe utilizar la dirección correspondiente al entorno de ejecución. Para la APK se debe configurar la URL pública de la API.
+No se debe subir el archivo `.env` con configuraciones locales o credenciales al repositorio.
+
+## 11. Consideraciones de desarrollo
+- Se utiliza TypeScript para mejorar el tipado y mantenimiento del código.
+- La navegación está implementada con Expo Router.
+- Los componentes reutilizables se organizan dentro de `src/components`.
+- La comunicación con la API se centraliza en `src/services`.
+- Las constantes, tipos, hooks y utilidades se mantienen separados para facilitar el mantenimiento.
+- Se contempla el funcionamiento sin conexión y la sincronización posterior de reportes.
+- Se deben probar las funcionalidades tanto en desarrollo como en una APK independiente.
+
+## 12. Estado actual del proyecto
+| Funcionalidad | Estado |
+|---|---|
+| Configuración inicial de Expo | Implementada |
+| Navegación con Expo Router | Implementada |
+| Conexión con la API | Implementada |
+| Registro de reportes | Implementado |
+| Captura de fotografías | Implementada |
+| Obtención de ubicación | Implementada |
+| Visualización de mapas en desarrollo | Funciona |
+| Visualización de mapas en APK | Pendiente de resolver |
+| Seguimiento de reportes | Implementado |
+| Gestión de reportes offline | Implementada |
+| Generación de APK mediante EAS | Configurada |
+| Migración a OpenStreetMap | Pendiente |
 
 ---
 
-## 9. Checklist de los 10 requisitos mínimos (antes de entregar)
-
-- [ ] Pantallas con Expo Router cubriendo el PRD.
-- [ ] Registro/login con sesión persistente (`expo-secure-store` + `expo-local-authentication`).
-- [ ] Capa de services con estados de carga/vacío/error visibles.
-- [ ] `expo-camera`/`expo-image-picker` + `expo-file-system` (API nueva: `File`, `Directory`, `Paths`).
-- [ ] `expo-location` + `react-native-maps`, usable sin permiso de ubicación.
-- [ ] `expo-notifications` disparadas por un hecho real.
-- [ ] `expo-sqlite` + `expo-sqlite/kv-store`, app usable sin conexión, `expo-network`.
-- [ ] Uso justificado de `expo-sensors` o `expo-haptics`.
-- [ ] `expo-audio` para la nota de voz, con controles visibles.
-- [ ] Ícono propio (1024×1024 sin transparencias) y splash screen.
-
-## 10. Cosas que la documentación vieja de internet dice mal
-
-- `expo-av` no existe más → es `expo-audio` y `expo-video`.
-- La API vieja de `expo-file-system` tira error en tiempo de ejecución → usar `File`, `Directory`, `Paths`.
-- Los íconos son `@react-native-vector-icons/ionicons`, no `@expo/vector-icons` (deprecado).
+**Proyecto académico – Universidad Nacional de Entre Ríos (UNER)**  
+Tecnicatura Universitaria en Desarrollo Web  
+Materia: Desarrollo para Móviles

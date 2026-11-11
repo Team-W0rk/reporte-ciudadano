@@ -1,7 +1,5 @@
-
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
-
 import { ColorPrimario } from '@/constants/dominio';
 import type { TipoListaReportes } from '@/hooks/reportes/useMisReportes';
 

@@ -11,7 +11,6 @@ interface Props {
 
 export function AvisoMapa({ tipo, mensaje, onAccion }: Props) {
   const esError = tipo === 'error';
-
   return (
     <View
       style={[
@@ -24,7 +23,6 @@ export function AvisoMapa({ tipo, mensaje, onAccion }: Props) {
         size={21}
         color={esError ? '#B03A2E' : '#8A5B00'}
       />
-
       <View style={styles.contenido}>
         <Text style={styles.titulo}>
           {esError ? 'No pudimos cargar los reportes' : 'Ubicación desactivada'}
@@ -36,7 +34,6 @@ export function AvisoMapa({ tipo, mensaje, onAccion }: Props) {
               ? 'Comprobá tu conexión e intentá nuevamente.'
               : 'El mapa está centrado en la ciudad.')}
         </Text>
-
         {onAccion && (
           <Pressable onPress={onAccion} hitSlop={8}>
             <Text style={styles.accion}>

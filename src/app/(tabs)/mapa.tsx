@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   ActivityIndicator,
   Linking,
@@ -23,17 +23,48 @@ import { ColorPrimario } from '@/constants/dominio';
 import { useReportesMapa } from '@/hooks/mapas/useReportesMapa';
 import { useUbicacionInicial } from '@/hooks/mapas/useUbicacionInicial';
 import type { Reporte } from '@/types';
+import { FiltrosTipo } from '@/components/mapa/FiltrosTipos';
+import { cargarTiposConCache } from '@/services/catalogos';
+import type { TipoDeReporte } from '@/types';
+import { useAuth } from '@/hooks/auth/useAuth';
+import { useAdhesionReporte } from '@/hooks/mapas/useAdhesionReporte';
 
 export default function MapaScreen() {
   const { regionInicial, permisoDenegado } = useUbicacionInicial();
-  const { reportes, cargando, error, cargarRegion } = useReportesMapa();
+  const { reportes, cargando, error, cargarRegion, actualizarAdhesiones } = useReportesMapa();
   const [filtro, setFiltro] = useState<FiltroReporte>('todos');
+  const [filtroTipo, setFiltroTipo] = useState<string | null>(null);
+  const [tipos, setTipos] = useState<TipoDeReporte[]>([]);  
   const [reporteSeleccionado, setReporteSeleccionado] = useState<Reporte | null>(null);
   const insets = useSafeAreaInsets();
-  const reportesFiltrados =
-    filtro === 'todos'
-      ? reportes
-      : reportes.filter((reporte) => reporte.estado === filtro);
+  const { usuario } = useAuth();
+  const { adheridos, procesando, adherirse } = useAdhesionReporte();
+  
+  useEffect(() => {
+    let activo = true;
+
+    cargarTiposConCache()
+      .then((datos) => {
+        if (activo) setTipos(datos);
+      })
+      .catch((error) => {
+        console.error('Error al cargar tipos de reporte:', error);
+      });
+
+    return () => {
+      activo = false;
+    };
+  }, []);
+
+  const reportesFiltrados = reportes.filter((reporte) => {
+    const coincideEstado =
+      filtro === 'todos' || reporte.estado === filtro;
+
+    const coincideTipo =
+      filtroTipo === null || reporte.tipoId === filtroTipo;
+
+    return coincideEstado && coincideTipo;
+  });
 
   if (!regionInicial) {
     return (
@@ -60,7 +91,6 @@ export default function MapaScreen() {
           onSeleccionar={setReporteSeleccionado}
         />
       </MapView>
-
       <View style={[ styles.panelSuperior, { top: insets.top }, ]}>
         <EncabezadoMapa />
         <FiltrosEstado
@@ -70,15 +100,21 @@ export default function MapaScreen() {
             setReporteSeleccionado(null);
           }}
         />
+        <FiltrosTipo
+          tipos={tipos}
+          seleccionado={filtroTipo}
+          onCambiar={(nuevoTipo) => {
+            setFiltroTipo(nuevoTipo);
+            setReporteSeleccionado(null);
+          }}
+        />
       </View>
-
       {permisoDenegado && (
         <AvisoMapa
           tipo="ubicacion"
           onAccion={() => void Linking.openSettings()}
         />
       )}
-
       {error && (
         <AvisoMapa
           tipo="error"
@@ -86,11 +122,8 @@ export default function MapaScreen() {
           onAccion={() => void cargarRegion(regionInicial)}
         />
       )}
-
       {cargando && <IndicadorCarga />}
-
       <ContadorReportes cantidad={reportesFiltrados.length} />
-
       {reporteSeleccionado && (
         <TarjetaReporteSeleccionado
           reporte={reporteSeleccionado}
@@ -98,9 +131,27 @@ export default function MapaScreen() {
           onVerDetalle={() =>
             router.push(`/reportes/detalle/${reporteSeleccionado.id}`)
           }
+          onSumarme={async () => {
+            const nuevaAdhesion = await adherirse(reporteSeleccionado);
+
+            if (nuevaAdhesion) {
+              actualizarAdhesiones(reporteSeleccionado.id);
+
+              setReporteSeleccionado((actual) =>
+                actual?.id === reporteSeleccionado.id
+                  ? {
+                      ...actual,
+                      adhesiones: actual.adhesiones + 1,
+                    }
+                  : actual,
+              );
+            }
+          }}
+          yaAdherido={adheridos.has(reporteSeleccionado.id)}
+          esPropio={reporteSeleccionado.autorId === usuario?.id}
+          sumando={procesando.has(reporteSeleccionado.id)}
         />
       )}
-
       <BotonNuevoReporte
         onPress={() => router.push('/reportes/nuevo')}
       />
